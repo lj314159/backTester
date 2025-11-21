@@ -2,18 +2,20 @@
 
 #include "Types.h"
 #include <vector>
-#include <memory>   // <- add this
+#include <memory> // <- add this
 
 class Portfolio;
 struct Candle;
 
-class IExecutionEngine {
+class IExecutionEngine
+{
 public:
-    virtual ~IExecutionEngine() = default;
+  virtual ~IExecutionEngine() = default;
 
-    virtual void execute(const std::vector<Order>& orders,
-                         const Candle& bar,
-                         Portfolio& portfolio) = 0;
+  virtual void execute(const std::vector<Order> &orders,
+                       const Candle &bar,
+                       Portfolio &portfolio)
+    = 0;
 };
 
 // Factory declaration

@@ -1,19 +1,22 @@
 #include "IExecutionEngine.h"
 #include "Portfolio.h"
-#include <memory>   // <- add this
+#include <memory> // <- add this
 
-class SimpleExecutionEngine : public IExecutionEngine {
+class SimpleExecutionEngine : public IExecutionEngine
+{
 public:
-    void execute(const std::vector<Order>& orders,
-                 const Candle& bar,
-                 Portfolio& portfolio) override
+  void execute(const std::vector<Order> &orders,
+               const Candle &bar,
+               Portfolio &portfolio) override
+  {
+    for(const auto &ord : orders)
     {
-        for (const auto& ord : orders) {
-            portfolio.applyFill(ord, bar.close);
-        }
+      portfolio.applyFill(ord, bar.close);
     }
+  }
 };
 
-std::unique_ptr<IExecutionEngine> makeSimpleExecutionEngine() {
-    return std::make_unique<SimpleExecutionEngine>();
+std::unique_ptr<IExecutionEngine> makeSimpleExecutionEngine()
+{
+  return std::make_unique<SimpleExecutionEngine>();
 }
