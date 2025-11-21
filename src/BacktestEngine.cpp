@@ -32,7 +32,7 @@ void BacktestEngine::run()
   }
 
   equityCurve_.clear();
-  equityCurve_.reserve(1024); // arbitrary; avoids some reallocs
+  equityCurve_.reserve(1024);
 
   strategy_->onStart(*this);
 
@@ -41,37 +41,30 @@ void BacktestEngine::run()
     const Candle &bar = feed_->next();
     pendingOrders_.clear();
 
-    // Strategy decides what to do on this bar
     strategy_->onBar(feed_->currentIndex(), bar, *this);
 
-    // Execute any orders placed during onBar
     if(!pendingOrders_.empty())
     {
       exec_->execute(pendingOrders_, bar, portfolio_);
     }
 
-    // For now, treat equity as just cash. If you want to include
-    // unrealized PnL, you’ll need a way to value open positions here.
     double equity = portfolio_.getCash();
     equityCurve_.push_back(equity);
   }
 
   strategy_->onEnd(*this);
 
-  // -------------------------------
-  //   Compute and print metrics
-  // -------------------------------
   if(equityCurve_.size() >= 2)
   {
     double totalRet = Metrics::totalReturn(equityCurve_);
     double maxDD = Metrics::maxDrawdown(equityCurve_);
 
-    // Approximate years based on bar count, assuming 252 trading days/year.
     double years = static_cast<double>(equityCurve_.size()) / 252.0;
     if(years <= 0.0)
     {
-      years = 1.0 / 252.0; // avoid zero/negative
+      years = 1.0 / 252.0;
     }
+
     double cagr = Metrics::cagr(equityCurve_, years);
     double sharpe = Metrics::sharpe(equityCurve_);
 

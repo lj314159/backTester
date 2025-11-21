@@ -10,7 +10,9 @@ class SimpleSMAStrategy : public ITradingStrategy
 {
 public:
   SimpleSMAStrategy(std::string symbol, std::size_t window)
-    : symbol_(std::move(symbol)), window_(window) {}
+    : symbol_(std::move(symbol)), window_(window)
+  {
+  }
 
   void onStart(BacktestEngine & /*engine*/) override
   {
@@ -22,20 +24,15 @@ public:
              const Candle &bar,
              BacktestEngine &engine) override
   {
-    // We assume the feed is for a single symbol (symbol_).
-    // So we don't check bar.symbol; Candle does not have that field.
-
     closes_.push_back(bar.close);
     if(closes_.size() < window_)
     {
-      return; // not enough data to compute SMA yet
+      return;
     }
 
     double sma = computeSMA();
     int posQty = engine.portfolio().getPositionQty(symbol_);
 
-    // Very naive trading logic:
-    // If close > SMA and no position -> buy 100
     if(bar.close > sma && posQty == 0)
     {
       Order buy;
@@ -45,7 +42,6 @@ public:
       engine.placeOrder(buy);
     }
 
-    // If close < SMA and we have a position -> sell all
     if(bar.close < sma && posQty > 0)
     {
       Order sell;
@@ -58,9 +54,8 @@ public:
 
   void onEnd(BacktestEngine &engine) override
   {
-    std::cout << "SimpleSMAStrategy finished. "
-              << "Final cash: " << engine.portfolio().getCash()
-              << "\n";
+    std::cout << "SimpleSMAStrategy finished. Final cash: "
+              << engine.portfolio().getCash() << "\n";
   }
 
 private:
@@ -80,7 +75,6 @@ private:
   std::vector<double> closes_;
 };
 
-// Factory function (declared in ITradingStrategy.h)
 std::unique_ptr<ITradingStrategy>
 makeSimpleSMAStrategy(const std::string &symbol, std::size_t window)
 {

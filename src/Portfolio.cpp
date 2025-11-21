@@ -46,7 +46,9 @@ int Portfolio::getPositionQty(const std::string &symbol) const
 {
   auto it = positions_.find(symbol);
   if(it == positions_.end())
+  {
     return 0;
+  }
   return it->second.quantity;
 }
 
@@ -55,6 +57,8 @@ double Portfolio::getPositionValue(const std::string &symbol,
 {
   auto it = positions_.find(symbol);
   if(it == positions_.end())
+  {
     return 0.0;
+  }
   return it->second.quantity * lastPrice;
 }

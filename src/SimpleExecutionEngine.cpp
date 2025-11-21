@@ -1,6 +1,6 @@
 #include "IExecutionEngine.h"
 #include "Portfolio.h"
-#include <memory> // <- add this
+#include <memory>
 
 class SimpleExecutionEngine : public IExecutionEngine
 {
