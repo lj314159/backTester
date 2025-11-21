@@ -1,6 +1,9 @@
 #include "IMarketDataFeed.h"
 #include <vector>
+#include <memory>
+#include <utility>  // for std::move
 
+// A simple in-memory implementation of IMarketDataFeed based on std::vector<Candle>.
 class VectorMarketDataFeed : public IMarketDataFeed {
 public:
     explicit VectorMarketDataFeed(std::vector<Candle> candles)
@@ -15,6 +18,7 @@ public:
     }
 
     std::size_t currentIndex() const override {
+        // If next() has never been called, we treat current index as 0.
         return index_ == 0 ? 0 : index_ - 1;
     }
 
@@ -23,6 +27,7 @@ private:
     std::size_t index_;
 };
 
+// Factory function defined in the .cpp, declared in IMarketDataFeed.h
 std::unique_ptr<IMarketDataFeed>
 makeVectorFeed(std::vector<Candle> candles)
 {

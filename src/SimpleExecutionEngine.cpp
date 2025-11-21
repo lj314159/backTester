@@ -1,5 +1,6 @@
 #include "IExecutionEngine.h"
 #include "Portfolio.h"
+#include <memory>   // <- add this
 
 class SimpleExecutionEngine : public IExecutionEngine {
 public:
@@ -13,7 +14,6 @@ public:
     }
 };
 
-// Factory helper so main.cpp can create it easily.
 std::unique_ptr<IExecutionEngine> makeSimpleExecutionEngine() {
     return std::make_unique<SimpleExecutionEngine>();
 }

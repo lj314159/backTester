@@ -4,6 +4,7 @@
 #include <vector>
 #include <numeric>
 #include <iostream>
+#include <cmath>
 
 class SimpleSMAStrategy : public ITradingStrategy {
 public:
@@ -19,17 +20,19 @@ public:
                const Candle& bar,
                BacktestEngine& engine) override
     {
-        if (bar.symbol != "" && bar.symbol != symbol_) {
-            // For simplicity, assume single-symbol data or ignore mismatch.
-        }
+        // We assume the feed is for a single symbol (symbol_).
+        // So we don't check bar.symbol; Candle does not have that field.
 
         closes_.push_back(bar.close);
-        if (closes_.size() < window_) return;
+        if (closes_.size() < window_) {
+            return; // not enough data to compute SMA yet
+        }
 
         double sma = computeSMA();
         int posQty = engine.portfolio().getPositionQty(symbol_);
 
-        // Super naive: if close > SMA and no position -> buy 100
+        // Very naive trading logic:
+        // If close > SMA and no position -> buy 100
         if (bar.close > sma && posQty == 0) {
             Order buy;
             buy.symbol   = symbol_;
@@ -69,7 +72,7 @@ private:
     std::vector<double> closes_;
 };
 
-// Factory
+// Factory function (declared in ITradingStrategy.h)
 std::unique_ptr<ITradingStrategy>
 makeSimpleSMAStrategy(const std::string& symbol, std::size_t window) {
     return std::make_unique<SimpleSMAStrategy>(symbol, window);
