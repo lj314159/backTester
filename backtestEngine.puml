@@ -1,0 +1,126 @@
+@startuml
+skinparam backgroundColor white
+skinparam classAttributeIconSize 0
+
+title Backtesting Engine (Strategy Pattern, C++)
+
+/'
+  - ITradingStrategy is the interface (abstract class in C++)
+  - BacktestEngine is the Context
+  - Concrete strategies implement onBar() etc.
+'/
+
+'-------------------------------------------------------
+' Core data structures
+'-------------------------------------------------------
+class Candle {
+    +dateTime : DateTime
+    +open : double
+    +high : double
+    +low  : double
+    +close : double
+    +volume : double
+}
+
+class Order {
+    +id : int
+    +side : OrderSide
+    +symbol : std::string
+    +quantity : int
+    +price : double
+}
+
+class Position {
+    +symbol : std::string
+    +quantity : int
+    +avgPrice : double
+    +unrealizedPnL() : double
+}
+
+class Portfolio {
+    +cash : double
+    +positions : std::map<std::string, Position>
+    +getPosition(symbol : std::string) : Position*
+    +updatePosition(order : Order, fillPrice : double) : void
+    +totalValue(marketData : MarketDataFeed) : double
+}
+
+class PortfolioView {
+    +getPosition(symbol : std::string) : const Position*
+    +getCash() : double
+    +getTotalValue() : double
+}
+
+PortfolioView ..> Portfolio : wraps >>
+
+class MarketDataFeed {
+    +getNextBar(symbol : std::string) : Candle
+    +hasMoreData() : bool
+}
+
+class ExecutionEngine {
+    +sendOrder(order : Order) : void
+    +simulateFill(order : Order, bar : Candle) : double
+}
+
+'-------------------------------------------------------
+' Strategy Interface + Implementations
+'-------------------------------------------------------
+interface ITradingStrategy {
+    +onBar(bar : Candle, portfolio : PortfolioView&, engine : BacktestEngine&) : void
+    +onStart(portfolio : PortfolioView&) : void
+    +onEnd(portfolio : PortfolioView&) : void
+}
+
+abstract class BaseTradingStrategy {
+    +name : std::string
+    +setParameters(params : std::map<std::string, double>) : void
+}
+
+ITradingStrategy <|-- BaseTradingStrategy
+
+class MeanReversionStrategy {
+    -lookback : int
+    -threshold : double
+    +onBar(bar : Candle, portfolio : PortfolioView&, engine : BacktestEngine&) : void
+}
+
+class MomentumStrategy {
+    -shortWindow : int
+    -longWindow  : int
+    +onBar(bar : Candle, portfolio : PortfolioView&, engine : BacktestEngine&) : void
+}
+
+BaseTradingStrategy <|-- MeanReversionStrategy
+BaseTradingStrategy <|-- MomentumStrategy
+
+'-------------------------------------------------------
+' Backtesting Context
+'-------------------------------------------------------
+class BacktestEngine {
+    -strategy : std::unique_ptr<ITradingStrategy>
+    -portfolio : Portfolio
+    -dataFeed : MarketDataFeed
+    -execEngine : ExecutionEngine
+    -symbol : std::string
+
+    +setStrategy(strategy : std::unique_ptr<ITradingStrategy>) : void
+    +run() : void
+    +placeOrder(order : Order) : void
+    +getPortfolioView() : PortfolioView
+}
+
+'-------------------------------------------------------
+' Relationships
+'-------------------------------------------------------
+BacktestEngine *-- Portfolio
+BacktestEngine *-- ExecutionEngine
+BacktestEngine o-- MarketDataFeed
+BacktestEngine *-- ITradingStrategy : currentStrategy
+
+ITradingStrategy ..> PortfolioView
+ITradingStrategy ..> BacktestEngine
+BacktestEngine ..> Candle
+BacktestEngine ..> Order
+
+@enduml
