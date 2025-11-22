@@ -1,0 +1,18 @@
+{
+  "asset": "NVDA",
+    "initial_cash": 100000.0,
+
+    "data": {
+      "provider": "alpha_vantage",
+      "interval": "daily"
+    },
+
+    "strategy": {
+      "name": "sma_crossover",
+      "params": {
+        "fast_window": 10,
+        "slow_window": 30
+      }
+    }
+
+}
