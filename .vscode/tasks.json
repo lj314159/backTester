@@ -1,0 +1,40 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Configure (cmake)",
+            "type": "shell",
+            "command": "cmake ..",
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            }
+        },
+        {
+            "label": "Build (cmake+make)",
+            "type": "shell",
+            "command": "make",
+            "dependsOn": "Configure (cmake)",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Run program",
+            "type": "shell",
+            "command": "./backtest_engine ../config.json",
+            "dependsOn": "Build (cmake+make)",
+            "group": "test",
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "presentation": {
+                "showReuseMessage": false
+            }
+        }
+    ]
+}
