@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+find_package(CURL REQUIRED)
+
 add_executable(backtest_engine
     src/BacktestEngine.cpp
     src/main.cpp
@@ -13,5 +15,8 @@ add_executable(backtest_engine
     src/SimpleExecutionEngine.cpp
     src/SimpleSMAStrategy.cpp
     src/VectorMarketDataFeed.cpp
-    src/Metrics.cpp          # <- this line is important
+    src/Metrics.cpp
+    src/AlphaVantageFeed.cpp
 )
+
+target_link_libraries(backtest_engine PRIVATE CURL::libcurl)

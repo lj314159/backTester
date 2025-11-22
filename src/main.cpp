@@ -2,53 +2,62 @@
 #include "ITradingStrategy.h"
 #include "IExecutionEngine.h"
 #include "IMarketDataFeed.h"
+#include "AlphaVantageFeed.h"
 #include "Types.h"
 
-#include <vector>
+#include <cstdlib>
 #include <iostream>
+#include <string>
 
 int main()
 {
-  std::vector<Candle> candles;
-  double price = 100.0;
-
-  for(int i = 0; i < 100; ++i)
+  const char *keyEnv = std::getenv("ALPHAVANTAGE_API_KEY");
+  if(keyEnv == nullptr)
   {
-    Candle c;
-    c.timestamp = "2025-01-01T00:" + std::to_string(i);
-    c.open = price;
-    c.high = price + 1.0;
-    c.low = price - 1.0;
-    c.close = price;
-    c.volume = 1000.0;
-
-    candles.push_back(c);
-
-    if(i < 50)
-    {
-      price += 0.5;
-    }
-    else
-    {
-      price -= 0.5;
-    }
+    std::cerr << "ALPHAVANTAGE_API_KEY not set\n";
+    return 1;
   }
 
-  auto feed = makeVectorFeed(std::move(candles));
-  auto exec = makeSimpleExecutionEngine();
-  auto strategy = makeSimpleSMAStrategy("AAPL", 10);
+  const std::string apiKey = keyEnv;
+  const std::string symbol = "AAPL";
 
-  BacktestEngine engine(
-    std::move(strategy),
-    std::move(exec),
-    std::move(feed),
-    100000.0);
+  try
+  {
+    std::cout << "Fetching " << symbol
+              << " from Alpha Vantage..." << std::endl;
 
-  engine.run();
+    // Market data feed from Alpha Vantage (daily data).
+    auto feed = makeAlphaVantageFeed(apiKey, symbol);
 
-  std::cout << "Backtest complete. Final cash: "
-            << engine.portfolio().getCash()
-            << "\n";
+    std::cout << "Finished fetching " << symbol
+              << " from Alpha Vantage." << std::endl;
+
+    // Simple execution engine: fills at bar.close.
+    auto exec = makeSimpleExecutionEngine();
+
+    // Simple SMA-based trading strategy.
+    auto strategy = makeSimpleSMAStrategy(symbol, 10);
+
+    // Backtest engine with initial cash and tested asset symbol.
+    BacktestEngine engine(std::move(strategy),
+                          std::move(exec),
+                          std::move(feed),
+                          100000.0,
+                          symbol);
+
+    engine.run();
+
+    std::cout << "Backtest complete. Final cash: "
+              << engine.portfolio().getCash()
+              << "\n";
+  }
+  catch(const std::exception &ex)
+  {
+    std::cerr << "Failed fetching " << symbol
+              << " from Alpha Vantage.\n";
+    std::cerr << "Error: " << ex.what() << "\n";
+    return 1;
+  }
 
   return 0;
 }

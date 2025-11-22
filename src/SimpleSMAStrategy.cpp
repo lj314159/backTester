@@ -1,16 +1,18 @@
 #include "ITradingStrategy.h"
 #include "BacktestEngine.h"
 #include "Portfolio.h"
+
 #include <vector>
-#include <numeric>
 #include <iostream>
-#include <cmath>
+#include <memory>
+#include <utility>
 
 class SimpleSMAStrategy : public ITradingStrategy
 {
 public:
   SimpleSMAStrategy(std::string symbol, std::size_t window)
-    : symbol_(std::move(symbol)), window_(window)
+    : symbol_(std::move(symbol)),
+      window_(window)
   {
   }
 
@@ -24,31 +26,27 @@ public:
              const Candle &bar,
              BacktestEngine &engine) override
   {
-    closes_.push_back(bar.close);
-    if(closes_.size() < window_)
+    // 1) Update our price history for indicators.
+    updateHistory(bar.close);
+
+    // 2) Wait until we have enough data to compute SMA.
+    if(!hasEnoughHistory())
     {
       return;
     }
 
+    // 3) Get indicator(s) and current position.
     double sma = computeSMA();
-    int posQty = engine.portfolio().getPositionQty(symbol_);
+    int posQty = currentPositionQty(engine);
 
+    // 4) Trading logic is now very readable.
     if(bar.close > sma && posQty == 0)
     {
-      Order buy;
-      buy.symbol = symbol_;
-      buy.side = OrderSide::Buy;
-      buy.quantity = 100;
-      engine.placeOrder(buy);
+      enterLong(engine, 100);
     }
-
-    if(bar.close < sma && posQty > 0)
+    else if(bar.close < sma && posQty > 0)
     {
-      Order sell;
-      sell.symbol = symbol_;
-      sell.side = OrderSide::Sell;
-      sell.quantity = posQty;
-      engine.placeOrder(sell);
+      exitLong(engine, posQty);
     }
   }
 
@@ -59,6 +57,22 @@ public:
   }
 
 private:
+  // --- Helper methods that hide the plumbing ---
+
+  void updateHistory(double close)
+  {
+    closes_.push_back(close);
+  }
+
+  bool hasEnoughHistory() const
+  {
+    if(closes_.size() >= window_)
+    {
+      return true;
+    }
+    return false;
+  }
+
   double computeSMA() const
   {
     double sum = 0.0;
@@ -70,11 +84,37 @@ private:
     return sum / static_cast<double>(window_);
   }
 
-  std::string symbol_;
-  std::size_t window_;
+  int currentPositionQty(BacktestEngine &engine) const
+  {
+    return engine.portfolio().getPositionQty(symbol_);
+  }
+
+  void enterLong(BacktestEngine &engine, int quantity)
+  {
+    Order buy;
+    buy.symbol   = symbol_;
+    buy.side     = OrderSide::Buy;
+    buy.quantity = quantity;
+    engine.placeOrder(buy);
+  }
+
+  void exitLong(BacktestEngine &engine, int quantity)
+  {
+    Order sell;
+    sell.symbol   = symbol_;
+    sell.side     = OrderSide::Sell;
+    sell.quantity = quantity;
+    engine.placeOrder(sell);
+  }
+
+  // --- Data members ---
+
+  std::string        symbol_;
+  std::size_t        window_;
   std::vector<double> closes_;
 };
 
+// Factory function used by main.cpp
 std::unique_ptr<ITradingStrategy>
 makeSimpleSMAStrategy(const std::string &symbol, std::size_t window)
 {
