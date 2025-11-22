@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.10)
 project(BacktestEngineExample CXX)
 
 # ================================
-# Language / standard
+# Language
 # ================================
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ================================
-# Build type (default: Release)
+# Build type
 # ================================
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING
@@ -19,9 +19,8 @@ endif()
 message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
 # ================================
-# Compiler warnings (all configs)
+# Compiler warnings
 # ================================
-# These apply to all build types.
 add_compile_options(
   -Wall
   -Wextra
@@ -32,14 +31,12 @@ add_compile_options(
 )
 
 # ================================
-# Optimization flags for Release
+# Optimization flags
 # ================================
-# These extend whatever CMake already sets for Release.
 set(CMAKE_CXX_FLAGS_RELEASE
     "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -mtune=native -fomit-frame-pointer"
 )
 
-# Optional: optimized but debuggable config
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
     "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O2 -march=native -mtune=native"
 )
@@ -56,6 +53,7 @@ find_package(CURL REQUIRED)
 
 # ================================
 # Strategies
+# ================================
 set(STRATEGY_SOURCES
   src/strategy/SimpleSMAStrategy.cpp
   src/strategy/SmaCrossoverStrategy.cpp
@@ -66,7 +64,7 @@ set(STRATEGY_SOURCES
 # ================================
 
 # ================================
-# Executable and sources
+# Executable
 # ================================
 add_executable(backtest_engine
   src/main.cpp
