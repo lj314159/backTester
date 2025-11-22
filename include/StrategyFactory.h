@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ITradingStrategy.h"
+#include "TradingStrategy_I.h"
 
 #include <memory>
 #include <string>

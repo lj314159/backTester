@@ -1,4 +1,4 @@
-#include "ITradingStrategy.h"
+#include "TradingStrategy_I.h"
 #include "BacktestEngine.h"
 #include "Portfolio.h"
 

@@ -1,6 +1,6 @@
 #include "BacktestEngine.h"
-#include "IExecutionEngine.h"
-#include "IMarketDataFeed.h"
+#include "ExecutionEngine_I.h"
+#include "MarketDataFeed_I.h"
 #include "StrategyFactory.h"
 #include "AlphaVantageFeed.h"
 #include "Types.h"

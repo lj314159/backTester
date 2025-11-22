@@ -1,7 +1,7 @@
 #include "BacktestEngine.h"
-#include "ITradingStrategy.h"
-#include "IExecutionEngine.h"
-#include "IMarketDataFeed.h"
+#include "TradingStrategy_I.h"
+#include "ExecutionEngine_I.h"
+#include "MarketDataFeed_I.h"
 #include "Metrics.h"
 
 #include <iostream>

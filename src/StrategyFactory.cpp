@@ -1,5 +1,5 @@
 #include "StrategyFactory.h"
-#include "ITradingStrategy.h"
+#include "TradingStrategy_I.h"
 
 #include <stdexcept>
 
