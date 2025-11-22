@@ -48,7 +48,7 @@ public:
     }
 
     double trendSma = computeSMA(trendWindow_);
-    double rsi      = computeRSI(rsiPeriod_);
+    double rsi = computeRSI(rsiPeriod_);
 
     if(rsi < minRsi_)
     {
@@ -70,8 +70,7 @@ public:
       ++trades_;
     }
     // Exit: either trend breaks or RSI normalizes / overbought.
-    else if(posQty > 0 &&
-            (!uptrend || rsi >= overbought_))
+    else if(posQty > 0 && (!uptrend || rsi >= overbought_))
     {
       exitLong(engine, posQty);
       ++trades_;
@@ -121,7 +120,7 @@ private:
     double gains = 0.0;
     double losses = 0.0;
 
-    std::size_t end   = closes_.size() - 1;
+    std::size_t end = closes_.size() - 1;
     std::size_t start = end - period + 1;
 
     for(std::size_t i = start; i <= end; ++i)
@@ -145,7 +144,7 @@ private:
       return 100.0;
     }
 
-    double rs  = avgGain / avgLoss;
+    double rs = avgGain / avgLoss;
     double rsi = 100.0 - 100.0 / (1.0 + rs);
     return rsi;
   }
@@ -153,8 +152,8 @@ private:
   void enterLong(BacktestEngine &engine, int quantity) const
   {
     Order buy;
-    buy.symbol   = symbol_;
-    buy.side     = OrderSide::Buy;
+    buy.symbol = symbol_;
+    buy.side = OrderSide::Buy;
     buy.quantity = quantity;
     engine.placeOrder(buy);
   }
@@ -162,20 +161,20 @@ private:
   void exitLong(BacktestEngine &engine, int quantity) const
   {
     Order sell;
-    sell.symbol   = symbol_;
-    sell.side     = OrderSide::Sell;
+    sell.symbol = symbol_;
+    sell.side = OrderSide::Sell;
     sell.quantity = quantity;
     engine.placeOrder(sell);
   }
 
-  std::string         symbol_;
-  std::size_t         rsiPeriod_;
-  double              overbought_;
-  double              oversold_;
-  std::size_t         trendWindow_;
+  std::string symbol_;
+  std::size_t rsiPeriod_;
+  double overbought_;
+  double oversold_;
+  std::size_t trendWindow_;
   std::vector<double> closes_;
 
-  int    trades_;
+  int trades_;
   double minRsi_;
   double maxRsi_;
 };

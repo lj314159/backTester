@@ -26,7 +26,8 @@ public:
 
   virtual void onBar(std::size_t index,
                      const Candle &bar,
-                     BacktestEngine &engine) = 0;
+                     BacktestEngine &engine)
+    = 0;
 
   virtual void onEnd(BacktestEngine &engine) = 0;
 };

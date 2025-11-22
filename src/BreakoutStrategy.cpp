@@ -44,7 +44,7 @@ public:
 
     double close = bar.close;
     double rangeHigh = recentMaxHigh();
-    double rangeLow  = recentMinLow();
+    double rangeLow = recentMinLow();
 
     int posQty = engine.portfolio().getPositionQty(symbol_);
 
@@ -88,7 +88,7 @@ private:
     std::size_t N = highs_.size();
     // Current bar is at index N-1.
     // Use [start, end] = [N-1-lookbackWindow_, N-2].
-    std::size_t end   = N - 2;
+    std::size_t end = N - 2;
     std::size_t start = end - lookbackWindow_ + 1;
 
     double maxH = highs_[start];
@@ -106,7 +106,7 @@ private:
   double recentMinLow() const
   {
     std::size_t N = lows_.size();
-    std::size_t end   = N - 2;
+    std::size_t end = N - 2;
     std::size_t start = end - lookbackWindow_ + 1;
 
     double minL = lows_[start];
@@ -123,8 +123,8 @@ private:
   void enterLong(BacktestEngine &engine, int quantity) const
   {
     Order buy;
-    buy.symbol   = symbol_;
-    buy.side     = OrderSide::Buy;
+    buy.symbol = symbol_;
+    buy.side = OrderSide::Buy;
     buy.quantity = quantity;
     engine.placeOrder(buy);
   }
@@ -132,18 +132,18 @@ private:
   void exitLong(BacktestEngine &engine, int quantity) const
   {
     Order sell;
-    sell.symbol   = symbol_;
-    sell.side     = OrderSide::Sell;
+    sell.symbol = symbol_;
+    sell.side = OrderSide::Sell;
     sell.quantity = quantity;
     engine.placeOrder(sell);
   }
 
-  std::string         symbol_;
-  std::size_t         lookbackWindow_;
+  std::string symbol_;
+  std::size_t lookbackWindow_;
   std::vector<double> highs_;
   std::vector<double> lows_;
   std::vector<double> closes_;
-  int                 trades_;
+  int trades_;
 };
 
 std::unique_ptr<ITradingStrategy>
