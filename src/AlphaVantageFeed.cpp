@@ -158,11 +158,19 @@ makeAlphaVantageFeed(const std::string &apiKey,
 
   if(lookbackBars > 0)
   {
-    if(static_cast<int>(dates.size()) > lookbackBars)
+    std::size_t size = dates.size();
+    std::size_t keep = static_cast<std::size_t>(lookbackBars);
+
+    if(size > keep)
     {
-      // Keep only the most recent lookbackBars dates.
+      // Number of elements to erase from the front.
+      std::size_t toErase = size - keep;
+
+      using Diff = std::vector<std::string>::difference_type;
+      Diff firstKeep = static_cast<Diff>(toErase);
+
       dates.erase(dates.begin(),
-                  dates.end() - static_cast<std::size_t>(lookbackBars));
+                  dates.begin() + firstKeep);
     }
   }
 
