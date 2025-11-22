@@ -55,6 +55,17 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 find_package(CURL REQUIRED)
 
 # ================================
+# Strategies
+set(STRATEGY_SOURCES
+  src/strategy/SimpleSMAStrategy.cpp
+  src/strategy/SmaCrossoverStrategy.cpp
+  src/strategy/RsiReversionStrategy.cpp
+  src/strategy/BreakoutStrategy.cpp
+  src/strategy/TrendRsiStrategy.cpp
+)
+# ================================
+
+# ================================
 # Executable and sources
 # ================================
 add_executable(backtest_engine
@@ -62,15 +73,12 @@ add_executable(backtest_engine
   src/BacktestEngine.cpp
   src/Portfolio.cpp
   src/SimpleExecutionEngine.cpp
-  src/SimpleSMAStrategy.cpp
-  src/SmaCrossoverStrategy.cpp
-  src/RsiReversionStrategy.cpp
-  src/BreakoutStrategy.cpp
-  src/TrendRsiStrategy.cpp
   src/VectorMarketDataFeed.cpp
   src/Metrics.cpp
   src/AlphaVantageFeed.cpp
   src/StrategyFactory.cpp
+
+  ${STRATEGY_SOURCES}
 )
 
 target_link_libraries(backtest_engine PRIVATE CURL::libcurl)
