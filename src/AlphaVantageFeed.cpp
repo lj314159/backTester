@@ -105,7 +105,7 @@ makeAlphaVantageFeed(const std::string &apiKey,
   std::ostringstream url;
   url << "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY"
       << "&symbol=" << symbol
-      << "&outputsize=full"
+      << "&outputsize=compact"
       << "&apikey=" << apiKey;
 
   std::string raw = httpGet(url.str());
