@@ -1,42 +1,60 @@
 #pragma once
 
 #include "Types.h"
+
 #include <cstddef>
 #include <memory>
 #include <string>
 
-// Forward declaration
 class BacktestEngine;
 
 /*
  * ITradingStrategy
  * ----------------
- * This is the Strategy interface in the Strategy pattern.
- * Concrete strategy classes (like SimpleSMAStrategy) implement this.
+ * Interface for all trading strategies.
+ *
+ *  - onStart: called once before the backtest loop.
+ *  - onBar:   called once per bar with the current Candle.
+ *  - onEnd:   called once after the backtest loop finishes.
  */
 class ITradingStrategy
 {
 public:
   virtual ~ITradingStrategy() = default;
 
-  // Called once before the first bar
   virtual void onStart(BacktestEngine &engine) = 0;
 
-  // Called once per bar (index and the current Candle are passed)
   virtual void onBar(std::size_t index,
                      const Candle &bar,
-                     BacktestEngine &engine)
-    = 0;
+                     BacktestEngine &engine) = 0;
 
-  // Called once after the last bar
   virtual void onEnd(BacktestEngine &engine) = 0;
 };
 
 /*
- * Factory function for building a Simple SMA Strategy.
- * ----------------------------------------------------
- * Defined in SimpleSMAStrategy.cpp, but declared here
- * so that main.cpp and BacktestEngine can call it.
+ * Factory functions for concrete strategies.
+ * Implemented in their corresponding .cpp files.
  */
+
+// Simple single-window SMA strategy.
 std::unique_ptr<ITradingStrategy>
-makeSimpleSMAStrategy(const std::string &symbol, std::size_t window);
+makeSimpleSMAStrategy(const std::string &symbol,
+                      std::size_t window);
+
+// Fast/slow SMA crossover strategy.
+std::unique_ptr<ITradingStrategy>
+makeSmaCrossoverStrategy(const std::string &symbol,
+                         std::size_t fastWindow,
+                         std::size_t slowWindow);
+
+// RSI mean-reversion strategy.
+std::unique_ptr<ITradingStrategy>
+makeRsiReversionStrategy(const std::string &symbol,
+                         std::size_t period,
+                         double overbought,
+                         double oversold);
+
+// Breakout of recent high/low range.
+std::unique_ptr<ITradingStrategy>
+makeBreakoutStrategy(const std::string &symbol,
+                     std::size_t lookbackWindow);

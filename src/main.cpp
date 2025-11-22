@@ -35,8 +35,12 @@ int main()
     // Simple execution engine: fills at bar.close.
     auto exec = makeSimpleExecutionEngine();
 
-    // Simple SMA-based trading strategy.
-    auto strategy = makeSimpleSMAStrategy(symbol, 10);
+    
+    //auto strategy = makeSimpleSMAStrategy(symbol, 10);
+    //auto strategy = makeSmaCrossoverStrategy(symbol, 10, 30);
+    auto strategy = makeRsiReversionStrategy(symbol, 14, 60.0, 40.0);
+    //auto strategy = makeBreakoutStrategy(symbol, 20);
+
 
     // Backtest engine with initial cash and tested asset symbol.
     BacktestEngine engine(std::move(strategy),
