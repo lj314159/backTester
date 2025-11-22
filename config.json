@@ -1,18 +1,14 @@
 {
-  "asset": "NVDA",
-    "initial_cash": 100000.0,
-
-    "data": {
-      "provider": "alpha_vantage",
-      "interval": "daily"
-    },
-
-    "strategy": {
-      "name": "sma_crossover",
-      "params": {
-        "fast_window": 10,
-        "slow_window": 30
-      }
+  "asset": "AAPL",
+  "initial_cash": 100000.0,
+  "data": {
+    "provider": "alpha_vantage",
+    "interval": "daily"
+  },
+  "strategy": {
+    "name": "breakout",
+    "params": {
+      "lookback_window": 50
     }
-
+  }
 }
