@@ -22,22 +22,19 @@ public:
     std::cout << "SimpleSMAStrategy starting\n";
   }
 
-  void onBar(std::size_t index,
+  void onBar(std::size_t /*index*/,
              const Candle &bar,
              BacktestEngine &engine) override
   {
-    // 1) Update our price history for indicators.
-    updateHistory(bar.close);
+    closes_.push_back(bar.close);
 
-    // 2) Wait until we have enough data to compute SMA.
-    if(!hasEnoughHistory())
+    if(closes_.size() < window_)
     {
       return;
     }
 
-    // 3) Get indicator(s) and current position.
     double sma = computeSMA();
-    int posQty = currentPositionQty(engine);
+    int posQty = engine.portfolio().getPositionQty(symbol_);
 
     // 4) Trading logic is now very readable.
     if(bar.close > sma && posQty == 0)

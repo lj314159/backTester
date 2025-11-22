@@ -36,18 +36,13 @@ add_compile_options(
 # ================================
 # These extend whatever CMake already sets for Release.
 set(CMAKE_CXX_FLAGS_RELEASE
-    "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -mtune=native -flto -fomit-frame-pointer"
+    "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -mtune=native -fomit-frame-pointer"
 )
 
 # Optional: optimized but debuggable config
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
     "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O2 -march=native -mtune=native"
 )
-
-# Enable link-time optimization in Release (non-MSVC)
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-endif()
 
 # ================================
 # Include directories
