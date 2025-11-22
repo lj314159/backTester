@@ -7,7 +7,7 @@
 #include <memory>
 #include <utility>
 
-class SmaCrossoverStrategy : public ITradingStrategy
+class SmaCrossoverStrategy : public TradingStrategy_I
 {
 public:
   SmaCrossoverStrategy(std::string symbol,
@@ -113,7 +113,7 @@ private:
   int trades_;
 };
 
-std::unique_ptr<ITradingStrategy>
+std::unique_ptr<TradingStrategy_I>
 makeSmaCrossoverStrategy(const std::string &symbol,
                          std::size_t fastWindow,
                          std::size_t slowWindow)

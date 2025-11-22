@@ -7,7 +7,7 @@
 #include <memory>
 #include <utility>
 
-class BreakoutStrategy : public ITradingStrategy
+class BreakoutStrategy : public TradingStrategy_I
 {
 public:
   BreakoutStrategy(std::string symbol,
@@ -146,7 +146,7 @@ private:
   int trades_;
 };
 
-std::unique_ptr<ITradingStrategy>
+std::unique_ptr<TradingStrategy_I>
 makeBreakoutStrategy(const std::string &symbol,
                      std::size_t lookbackWindow)
 {

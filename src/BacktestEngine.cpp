@@ -7,9 +7,9 @@
 #include <iostream>
 #include <algorithm>
 
-BacktestEngine::BacktestEngine(std::unique_ptr<ITradingStrategy> strategy,
-                               std::unique_ptr<IExecutionEngine> exec,
-                               std::unique_ptr<IMarketDataFeed> feed,
+BacktestEngine::BacktestEngine(std::unique_ptr<TradingStrategy_I> strategy,
+                               std::unique_ptr<ExecutionEngine_I> exec,
+                               std::unique_ptr<MarketDataFeed_I> feed,
                                double initialCash,
                                std::string assetSymbol)
   : strategy_(std::move(strategy)),

@@ -7,7 +7,7 @@
 #include <memory>
 #include <utility>
 
-class SimpleSMAStrategy : public ITradingStrategy
+class SimpleSMAStrategy : public TradingStrategy_I
 {
 public:
   SimpleSMAStrategy(std::string symbol, std::size_t window)
@@ -112,7 +112,7 @@ private:
 };
 
 // Factory function used by main.cpp
-std::unique_ptr<ITradingStrategy>
+std::unique_ptr<TradingStrategy_I>
 makeSimpleSMAStrategy(const std::string &symbol, std::size_t window)
 {
   return std::make_unique<SimpleSMAStrategy>(symbol, window);

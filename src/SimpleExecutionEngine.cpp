@@ -2,7 +2,7 @@
 #include "Portfolio.h"
 #include <memory>
 
-class SimpleExecutionEngine : public IExecutionEngine
+class SimpleExecutionEngine : public ExecutionEngine_I
 {
 public:
   void execute(const std::vector<Order> &orders,
@@ -16,7 +16,7 @@ public:
   }
 };
 
-std::unique_ptr<IExecutionEngine> makeSimpleExecutionEngine()
+std::unique_ptr<ExecutionEngine_I> makeSimpleExecutionEngine()
 {
   return std::make_unique<SimpleExecutionEngine>();
 }

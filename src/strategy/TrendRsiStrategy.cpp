@@ -8,7 +8,7 @@
 #include <utility>
 #include <cmath>
 
-class TrendRsiStrategy : public ITradingStrategy
+class TrendRsiStrategy : public TradingStrategy_I
 {
 public:
   TrendRsiStrategy(std::string symbol,
@@ -179,7 +179,7 @@ private:
   double maxRsi_;
 };
 
-std::unique_ptr<ITradingStrategy>
+std::unique_ptr<TradingStrategy_I>
 makeTrendRsiStrategy(const std::string &symbol,
                      std::size_t rsiPeriod,
                      double overbought,

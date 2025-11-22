@@ -5,10 +5,10 @@
 #include <vector>
 #include <memory>
 
-class IMarketDataFeed
+class MarketDataFeed_I
 {
 public:
-  virtual ~IMarketDataFeed() = default;
+  virtual ~MarketDataFeed_I() = default;
 
   // Is there another bar available?
   virtual bool hasNext() const = 0;
@@ -21,4 +21,4 @@ public:
 };
 
 // Factory for a simple in-memory feed backed by std::vector<Candle>.
-std::unique_ptr<IMarketDataFeed> makeVectorFeed(std::vector<Candle> candles);
+std::unique_ptr<MarketDataFeed_I> makeVectorFeed(std::vector<Candle> candles);

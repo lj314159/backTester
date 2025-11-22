@@ -7,10 +7,10 @@
 class Portfolio;
 struct Candle;
 
-class IExecutionEngine
+class ExecutionEngine_I
 {
 public:
-  virtual ~IExecutionEngine() = default;
+  virtual ~ExecutionEngine_I() = default;
 
   virtual void execute(const std::vector<Order> &orders,
                        const Candle &bar,
@@ -19,4 +19,4 @@ public:
 };
 
 // Factory declaration
-std::unique_ptr<IExecutionEngine> makeSimpleExecutionEngine();
+std::unique_ptr<ExecutionEngine_I> makeSimpleExecutionEngine();

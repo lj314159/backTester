@@ -3,7 +3,7 @@
 #include <memory>
 #include <utility>
 
-class VectorMarketDataFeed : public IMarketDataFeed
+class VectorMarketDataFeed : public MarketDataFeed_I
 {
 public:
   explicit VectorMarketDataFeed(std::vector<Candle> candles)
@@ -35,7 +35,7 @@ private:
   std::size_t index_;
 };
 
-std::unique_ptr<IMarketDataFeed>
+std::unique_ptr<MarketDataFeed_I>
 makeVectorFeed(std::vector<Candle> candles)
 {
   return std::make_unique<VectorMarketDataFeed>(std::move(candles));

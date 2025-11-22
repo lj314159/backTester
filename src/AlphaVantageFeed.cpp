@@ -1,4 +1,5 @@
 #include "AlphaVantageFeed.h"
+#include "MarketDataFeed_I.h"
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
@@ -92,7 +93,7 @@ std::size_t AlphaVantageFeed::currentIndex() const
   return index_;
 }
 
-std::unique_ptr<IMarketDataFeed>
+std::unique_ptr<MarketDataFeed_I>
 makeAlphaVantageFeed(const std::string &apiKey,
                      const std::string &symbol,
                      int lookbackBars)

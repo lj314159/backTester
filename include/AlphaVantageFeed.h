@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-class AlphaVantageFeed : public IMarketDataFeed
+class AlphaVantageFeed : public MarketDataFeed_I
 {
 public:
   explicit AlphaVantageFeed(std::vector<Candle> candles);
@@ -25,7 +25,7 @@ private:
 // Factory: builds an AlphaVantageFeed by fetching data over HTTP.
 // lookbackBars > 0  -> keep only the most recent lookbackBars candles
 // lookbackBars <= 0 -> keep all candles returned by Alpha Vantage
-std::unique_ptr<IMarketDataFeed>
+std::unique_ptr<MarketDataFeed_I>
 makeAlphaVantageFeed(const std::string &apiKey,
                      const std::string &symbol,
                      int lookbackBars);

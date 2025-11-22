@@ -8,9 +8,9 @@
 #include <string>
 
 // Forward declarations of interfaces
-class ITradingStrategy;
-class IExecutionEngine;
-class IMarketDataFeed;
+class TradingStrategy_I;
+class ExecutionEngine_I;
+class MarketDataFeed_I;
 
 /*
  * BacktestEngine
@@ -27,9 +27,9 @@ class BacktestEngine
 public:
   // Construct a backtest engine with a strategy, execution engine,
   // market data feed, initial cash, and the asset symbol being tested.
-  BacktestEngine(std::unique_ptr<ITradingStrategy> strategy,
-                 std::unique_ptr<IExecutionEngine> exec,
-                 std::unique_ptr<IMarketDataFeed> feed,
+  BacktestEngine(std::unique_ptr<TradingStrategy_I> strategy,
+                 std::unique_ptr<ExecutionEngine_I> exec,
+                 std::unique_ptr<MarketDataFeed_I> feed,
                  double initialCash,
                  std::string assetSymbol);
 
@@ -57,9 +57,9 @@ public:
   }
 
 private:
-  std::unique_ptr<ITradingStrategy> strategy_;
-  std::unique_ptr<IExecutionEngine> exec_;
-  std::unique_ptr<IMarketDataFeed> feed_;
+  std::unique_ptr<TradingStrategy_I> strategy_;
+  std::unique_ptr<ExecutionEngine_I> exec_;
+  std::unique_ptr<MarketDataFeed_I> feed_;
   Portfolio portfolio_;
 
   // Orders placed during the current bar, to be passed to the execution engine.

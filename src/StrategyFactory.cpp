@@ -5,7 +5,7 @@
 
 using nlohmann::json;
 
-std::unique_ptr<ITradingStrategy>
+std::unique_ptr<TradingStrategy_I>
 makeStrategyFromConfig(const json &strategyJson,
                        const std::string &symbol)
 {

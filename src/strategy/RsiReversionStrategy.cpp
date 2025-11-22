@@ -8,7 +8,7 @@
 #include <utility>
 #include <cmath>
 
-class RsiReversionStrategy : public ITradingStrategy
+class RsiReversionStrategy : public TradingStrategy_I
 {
 public:
   RsiReversionStrategy(std::string symbol,
@@ -154,7 +154,7 @@ private:
   double maxRsi_;
 };
 
-std::unique_ptr<ITradingStrategy>
+std::unique_ptr<TradingStrategy_I>
 makeRsiReversionStrategy(const std::string &symbol,
                          std::size_t period,
                          double overbought,
