@@ -14,7 +14,7 @@
 
 using nlohmann::json;
 
-static json loadConfig(const std::string &path)
+json loadConfig(const std::string &path)
 {
   std::ifstream in(path);
   if(!in)
@@ -77,7 +77,10 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  std::string symbol = cfg.at("asset").get<std::string>();
+  // looks for the asset being traded
+  std::string ticker = cfg.at("asset").get<std::string>();
+
+  // looks for initial_cash, if doesn't exist, returns 100000.0
   double initialCash = cfg.value("initial_cash", 100000.0);
 
   // Data provider (only alpha_vantage supported for now).
@@ -89,14 +92,13 @@ int main(int argc, char **argv)
 
   if(provider != "alpha_vantage")
   {
-    std::cerr << "Config error: only 'alpha_vantage' provider is supported "
-                 "in this version. Got: "
+    std::cerr << "Config error: only 'alpha_vantage' provider is supported in this version. Got: "
               << provider << "\n";
     return 1;
   }
 
   // Lookback bars: how many most-recent candles to use.
-  // Default: 100 (previous hard-coded behavior).
+  // Default: 100
   int lookbackBars = 100;
   if(cfg.contains("data") && cfg["data"].contains("lookback_bars"))
   {
@@ -108,13 +110,11 @@ int main(int argc, char **argv)
     // -------------------------------------------------
     //  4. Build data feed
     // -------------------------------------------------
-    std::cout << "Fetching " << symbol
-              << " from Alpha Vantage..." << std::endl;
+    std::cout << "Fetching " << ticker << " from Alpha Vantage..." << std::endl;
 
-    auto feed = makeAlphaVantageFeed(apiKey, symbol, lookbackBars);
+    auto feed = makeAlphaVantageFeed(apiKey, ticker, lookbackBars);
 
-    std::cout << "Finished fetching " << symbol
-              << " from Alpha Vantage." << std::endl;
+    std::cout << "Finished fetching " << ticker << " from Alpha Vantage." << std::endl;
 
     // -------------------------------------------------
     //  5. Build execution engine and strategy
@@ -122,16 +122,17 @@ int main(int argc, char **argv)
     auto exec = makeSimpleExecutionEngine();
 
     const json &strategyJson = cfg.at("strategy");
-    auto strategy = makeStrategyFromConfig(strategyJson, symbol);
+    auto strategy = makeStrategyFromConfig(strategyJson, ticker);
 
     // -------------------------------------------------
     //  6. Run backtest
     // -------------------------------------------------
+    // give engine control of previous objects
     BacktestEngine engine(std::move(strategy),
                           std::move(exec),
                           std::move(feed),
                           initialCash,
-                          symbol);
+                          ticker);
 
     engine.run();
 
