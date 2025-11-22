@@ -70,10 +70,9 @@ void AlphaVantageFeed::loadDailySeries(const std::string &apiKey,
   std::string buffer;
 
   // Use FREE daily endpoint (not adjusted).
-  std::string url =
-    "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY"
-    "&outputsize=compact&symbol=" +
-    symbol + "&apikey=" + apiKey;
+  std::string url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY"
+                    "&outputsize=compact&symbol="
+                    + symbol + "&apikey=" + apiKey;
 
   curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
@@ -83,8 +82,7 @@ void AlphaVantageFeed::loadDailySeries(const std::string &apiKey,
   if(res != CURLE_OK)
   {
     curl_easy_cleanup(curl);
-    throw std::runtime_error(std::string("curl_easy_perform failed: ") +
-                             curl_easy_strerror(res));
+    throw std::runtime_error(std::string("curl_easy_perform failed: ") + curl_easy_strerror(res));
   }
 
   long httpCode = 0;
@@ -93,8 +91,7 @@ void AlphaVantageFeed::loadDailySeries(const std::string &apiKey,
 
   if(httpCode != 200)
   {
-    throw std::runtime_error("HTTP error from Alpha Vantage, code " +
-                             std::to_string(httpCode));
+    throw std::runtime_error("HTTP error from Alpha Vantage, code " + std::to_string(httpCode));
   }
 
   json j = json::parse(buffer, nullptr, true, true);
@@ -116,8 +113,8 @@ void AlphaVantageFeed::loadDailySeries(const std::string &apiKey,
   {
     throw std::runtime_error(
       "Alpha Vantage response missing 'Time Series (Daily)'. "
-      "Raw response (truncated): " +
-      buffer.substr(0, 200));
+      "Raw response (truncated): "
+      + buffer.substr(0, 200));
   }
 
   const auto &ts = j.at("Time Series (Daily)");
@@ -131,10 +128,10 @@ void AlphaVantageFeed::loadDailySeries(const std::string &apiKey,
 
     Candle c;
     c.timestamp = date;
-    c.open   = std::stod(bar.at("1. open").get<std::string>());
-    c.high   = std::stod(bar.at("2. high").get<std::string>());
-    c.low    = std::stod(bar.at("3. low").get<std::string>());
-    c.close  = std::stod(bar.at("4. close").get<std::string>());
+    c.open = std::stod(bar.at("1. open").get<std::string>());
+    c.high = std::stod(bar.at("2. high").get<std::string>());
+    c.low = std::stod(bar.at("3. low").get<std::string>());
+    c.close = std::stod(bar.at("4. close").get<std::string>());
 
     // For TIME_SERIES_DAILY, volume is "5. volume" (NOT "6. volume").
     c.volume = std::stod(bar.at("5. volume").get<std::string>());
@@ -143,8 +140,7 @@ void AlphaVantageFeed::loadDailySeries(const std::string &apiKey,
   }
 
   std::sort(temp.begin(), temp.end(),
-            [](const Candle &a, const Candle &b)
-            {
+            [](const Candle &a, const Candle &b) {
               return a.timestamp < b.timestamp;
             });
 

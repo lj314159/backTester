@@ -92,8 +92,8 @@ private:
   void enterLong(BacktestEngine &engine, int quantity)
   {
     Order buy;
-    buy.symbol   = symbol_;
-    buy.side     = OrderSide::Buy;
+    buy.symbol = symbol_;
+    buy.side = OrderSide::Buy;
     buy.quantity = quantity;
     engine.placeOrder(buy);
   }
@@ -101,16 +101,16 @@ private:
   void exitLong(BacktestEngine &engine, int quantity)
   {
     Order sell;
-    sell.symbol   = symbol_;
-    sell.side     = OrderSide::Sell;
+    sell.symbol = symbol_;
+    sell.side = OrderSide::Sell;
     sell.quantity = quantity;
     engine.placeOrder(sell);
   }
 
   // --- Data members ---
 
-  std::string        symbol_;
-  std::size_t        window_;
+  std::string symbol_;
+  std::size_t window_;
   std::vector<double> closes_;
 };
 

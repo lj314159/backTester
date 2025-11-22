@@ -59,11 +59,11 @@ public:
 private:
   std::unique_ptr<ITradingStrategy> strategy_;
   std::unique_ptr<IExecutionEngine> exec_;
-  std::unique_ptr<IMarketDataFeed>  feed_;
-  Portfolio                         portfolio_;
+  std::unique_ptr<IMarketDataFeed> feed_;
+  Portfolio portfolio_;
 
   // Orders placed during the current bar, to be passed to the execution engine.
-  std::vector<Order>  pendingOrders_;
+  std::vector<Order> pendingOrders_;
 
   // Equity curve (portfolio value over time), useful for metrics.
   std::vector<double> equityCurve_;

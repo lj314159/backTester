@@ -19,7 +19,7 @@ private:
                        const std::string &symbol);
 
   std::vector<Candle> candles_;
-  std::size_t index_ {0};
+  std::size_t index_{ 0 };
 };
 
 // Factory function (similar style to makeVectorFeed)
