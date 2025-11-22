@@ -19,9 +19,11 @@ add_executable(backtest_engine
   src/SmaCrossoverStrategy.cpp
   src/RsiReversionStrategy.cpp
   src/BreakoutStrategy.cpp
+  src/TrendRsiStrategy.cpp
   src/VectorMarketDataFeed.cpp
   src/Metrics.cpp
   src/AlphaVantageFeed.cpp
+  src/StrategyFactory.cpp
 )
 
 # If your CMake/curl package doesn’t provide CURL::libcurl,

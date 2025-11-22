@@ -58,3 +58,16 @@ makeRsiReversionStrategy(const std::string &symbol,
 std::unique_ptr<ITradingStrategy>
 makeBreakoutStrategy(const std::string &symbol,
                      std::size_t lookbackWindow);
+
+// Breakout of recent high/low range.
+std::unique_ptr<ITradingStrategy>
+makeBreakoutStrategy(const std::string &symbol,
+                     std::size_t lookbackWindow);
+
+// Trend + RSI dip-buy strategy.
+std::unique_ptr<ITradingStrategy>
+makeTrendRsiStrategy(const std::string &symbol,
+                     std::size_t rsiPeriod,
+                     double overbought,
+                     double oversold,
+                     std::size_t trendWindow);

@@ -1,7 +1,7 @@
 #include "BacktestEngine.h"
-#include "ITradingStrategy.h"
 #include "IExecutionEngine.h"
 #include "IMarketDataFeed.h"
+#include "StrategyFactory.h"
 #include "AlphaVantageFeed.h"
 #include "Types.h"
 
@@ -14,53 +14,17 @@
 
 using nlohmann::json;
 
-// Helper: choose and build a strategy from JSON config.
-static std::unique_ptr<ITradingStrategy>
-makeStrategyFromConfig(const json &strategyJson,
-                       const std::string &symbol)
+static json loadConfig(const std::string &path)
 {
-  if(!strategyJson.contains("name"))
+  std::ifstream in(path);
+  if(!in)
   {
-    throw std::runtime_error("Config error: 'strategy.name' is missing");
+    throw std::runtime_error("Failed to open config file: " + path);
   }
 
-  std::string name = strategyJson.at("name").get<std::string>();
-
-  json params = json::object();
-  if(strategyJson.contains("params"))
-  {
-    params = strategyJson.at("params");
-  }
-
-  if(name == "simple_sma")
-  {
-    std::size_t window = params.value("window", static_cast<std::size_t>(10));
-    return makeSimpleSMAStrategy(symbol, window);
-  }
-  else if(name == "sma_crossover")
-  {
-    std::size_t fastWindow =
-      params.value("fast_window", static_cast<std::size_t>(10));
-    std::size_t slowWindow =
-      params.value("slow_window", static_cast<std::size_t>(30));
-    return makeSmaCrossoverStrategy(symbol, fastWindow, slowWindow);
-  }
-  else if(name == "rsi_reversion")
-  {
-    std::size_t period =
-      params.value("period", static_cast<std::size_t>(14));
-    double overbought = params.value("overbought", 70.0);
-    double oversold   = params.value("oversold", 30.0);
-    return makeRsiReversionStrategy(symbol, period, overbought, oversold);
-  }
-  else if(name == "breakout")
-  {
-    std::size_t lookback =
-      params.value("lookback_window", static_cast<std::size_t>(20));
-    return makeBreakoutStrategy(symbol, lookback);
-  }
-
-  throw std::runtime_error("Config error: unknown strategy name '" + name + "'");
+  json cfg;
+  in >> cfg;
+  return cfg;
 }
 
 int main(int argc, char **argv)
@@ -87,30 +51,20 @@ int main(int argc, char **argv)
     configPath = argv[1];
   }
 
-  // -------------------------------------------------
-  //  3. Load JSON config
-  // -------------------------------------------------
   json cfg;
+  try
   {
-    std::ifstream in(configPath);
-    if(!in)
-    {
-      std::cerr << "Failed to open config file: " << configPath << "\n";
-      return 1;
-    }
-    try
-    {
-      in >> cfg;
-    }
-    catch(const std::exception &ex)
-    {
-      std::cerr << "Error parsing config JSON in " << configPath
-                << ": " << ex.what() << "\n";
-      return 1;
-    }
+    cfg = loadConfig(configPath);
+  }
+  catch(const std::exception &ex)
+  {
+    std::cerr << "Error loading config: " << ex.what() << "\n";
+    return 1;
   }
 
-  // Basic required fields.
+  // -------------------------------------------------
+  //  3. Validate basic config fields
+  // -------------------------------------------------
   if(!cfg.contains("asset"))
   {
     std::cerr << "Config error: 'asset' field is required\n";
@@ -126,9 +80,7 @@ int main(int argc, char **argv)
   std::string symbol = cfg.at("asset").get<std::string>();
   double initialCash = cfg.value("initial_cash", 100000.0);
 
-  // -------------------------------------------------
-  //  4. Build data feed (currently: Alpha Vantage only)
-  // -------------------------------------------------
+  // Data provider (only alpha_vantage supported for now).
   std::string provider = "alpha_vantage";
   if(cfg.contains("data") && cfg["data"].contains("provider"))
   {
@@ -145,6 +97,9 @@ int main(int argc, char **argv)
 
   try
   {
+    // -------------------------------------------------
+    //  4. Build data feed
+    // -------------------------------------------------
     std::cout << "Fetching " << symbol
               << " from Alpha Vantage..." << std::endl;
 
