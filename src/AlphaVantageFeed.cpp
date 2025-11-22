@@ -4,31 +4,69 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
 using nlohmann::json;
 
 namespace
 {
-size_t writeCallback(char *ptr,
-                     size_t size,
-                     size_t nmemb,
-                     void *userdata)
+
+size_t writeCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-  std::size_t total = size * nmemb;
-  std::string *buffer = static_cast<std::string *>(userdata);
-  buffer->append(ptr, total);
-  return total;
+  std::size_t totalSize = size * nmemb;
+  auto *buffer = static_cast<std::string *>(userdata);
+  buffer->append(ptr, totalSize);
+  return totalSize;
 }
+
+// Helper to perform a simple HTTP GET using libcurl.
+std::string httpGet(const std::string &url)
+{
+  CURL *curl = curl_easy_init();
+  if(curl == nullptr)
+  {
+    throw std::runtime_error("Failed to initialize CURL");
+  }
+
+  std::string response;
+  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+  CURLcode res = curl_easy_perform(curl);
+  if(res != CURLE_OK)
+  {
+    std::string msg = "CURL error: ";
+    msg += curl_easy_strerror(res);
+    curl_easy_cleanup(curl);
+    throw std::runtime_error(msg);
+  }
+
+  long httpCode = 0;
+  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+  curl_easy_cleanup(curl);
+
+  if(httpCode != 200)
+  {
+    std::ostringstream oss;
+    oss << "HTTP error code " << httpCode;
+    throw std::runtime_error(oss.str());
+  }
+
+  return response;
+}
+
 } // namespace
 
-AlphaVantageFeed::AlphaVantageFeed(const std::string &apiKey,
-                                   const std::string &symbol)
+AlphaVantageFeed::AlphaVantageFeed(std::vector<Candle> candles)
+  : candles_(std::move(candles)),
+    index_(0)
 {
-  loadDailySeries(apiKey, symbol);
 }
 
 bool AlphaVantageFeed::hasNext() const
@@ -42,89 +80,97 @@ bool AlphaVantageFeed::hasNext() const
 
 const Candle &AlphaVantageFeed::next()
 {
-  if(index_ >= candles_.size())
+  if(!hasNext())
   {
-    throw std::out_of_range("AlphaVantageFeed::next: no more data");
+    throw std::out_of_range("AlphaVantageFeed::next called with no more data");
   }
-  return candles_.at(index_++);
+  return candles_[index_++];
 }
 
 std::size_t AlphaVantageFeed::currentIndex() const
 {
-  if(index_ == 0)
-  {
-    return 0;
-  }
-  return index_ - 1;
+  return index_;
 }
 
-void AlphaVantageFeed::loadDailySeries(const std::string &apiKey,
-                                       const std::string &symbol)
+std::unique_ptr<IMarketDataFeed>
+makeAlphaVantageFeed(const std::string &apiKey,
+                     const std::string &symbol,
+                     int lookbackBars)
 {
-  CURL *curl = curl_easy_init();
-  if(curl == nullptr)
+  // ------------------------------------------------------------------
+  // Build URL:
+  //   TIME_SERIES_DAILY, full history, then trim to lookbackBars.
+  // ------------------------------------------------------------------
+  std::ostringstream url;
+  url << "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY"
+      << "&symbol=" << symbol
+      << "&outputsize=full"
+      << "&apikey=" << apiKey;
+
+  std::string raw = httpGet(url.str());
+
+  // ------------------------------------------------------------------
+  // Parse JSON.
+  // ------------------------------------------------------------------
+  json j;
+  try
   {
-    throw std::runtime_error("Failed to initialize CURL");
+    j = json::parse(raw);
+  }
+  catch(const std::exception &ex)
+  {
+    std::string msg = "Failed to parse Alpha Vantage JSON: ";
+    msg += ex.what();
+    throw std::runtime_error(msg);
   }
 
-  std::string buffer;
+  const char *seriesKey = "Time Series (Daily)";
 
-  // Use FREE daily endpoint (not adjusted).
-  std::string url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY"
-                    "&outputsize=compact&symbol="
-                    + symbol + "&apikey=" + apiKey;
-
-  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
-
-  CURLcode res = curl_easy_perform(curl);
-  if(res != CURLE_OK)
+  if(!j.contains(seriesKey))
   {
-    curl_easy_cleanup(curl);
-    throw std::runtime_error(std::string("curl_easy_perform failed: ") + curl_easy_strerror(res));
+    std::ostringstream oss;
+    oss << "Alpha Vantage response missing 'Time Series (Daily)'. "
+        << "Raw response (truncated): "
+        << raw.substr(0, 400);
+    throw std::runtime_error(oss.str());
   }
 
-  long httpCode = 0;
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-  curl_easy_cleanup(curl);
+  const json &series = j.at(seriesKey);
 
-  if(httpCode != 200)
+  if(!series.is_object())
   {
-    throw std::runtime_error("HTTP error from Alpha Vantage, code " + std::to_string(httpCode));
+    throw std::runtime_error("Alpha Vantage 'Time Series (Daily)' is not an object");
   }
 
-  json j = json::parse(buffer, nullptr, true, true);
-
-  // Check for rate limit / error messages first.
-  if(j.contains("Note"))
+  // ------------------------------------------------------------------
+  // Collect all dates, sort, and apply lookback.
+  // ------------------------------------------------------------------
+  std::vector<std::string> dates;
+  dates.reserve(series.size());
+  for(auto it = series.begin(); it != series.end(); ++it)
   {
-    std::string note = j.at("Note").get<std::string>();
-    throw std::runtime_error(std::string("Alpha Vantage Note: ") + note);
+    dates.push_back(it.key());
   }
 
-  if(j.contains("Error Message"))
+  // Sort ascending by date string (YYYY-MM-DD) so earliest first.
+  std::sort(dates.begin(), dates.end());
+
+  if(lookbackBars > 0)
   {
-    std::string msg = j.at("Error Message").get<std::string>();
-    throw std::runtime_error(std::string("Alpha Vantage Error Message: ") + msg);
+    if(static_cast<int>(dates.size()) > lookbackBars)
+    {
+      // Keep only the most recent lookbackBars dates.
+      dates.erase(dates.begin(),
+                  dates.end() - static_cast<std::size_t>(lookbackBars));
+    }
   }
 
-  if(!j.contains("Time Series (Daily)"))
+  std::vector<Candle> candles;
+  candles.reserve(dates.size());
+
+  for(const std::string &date : dates)
   {
-    throw std::runtime_error(
-      "Alpha Vantage response missing 'Time Series (Daily)'. "
-      "Raw response (truncated): "
-      + buffer.substr(0, 200));
-  }
-
-  const auto &ts = j.at("Time Series (Daily)");
-
-  std::vector<Candle> temp;
-
-  for(auto it = ts.begin(); it != ts.end(); ++it)
-  {
-    const std::string date = it.key();
-    const json &bar = it.value();
+    const json &bar = series.at(date);
 
     Candle c;
     c.timestamp = date;
@@ -132,29 +178,15 @@ void AlphaVantageFeed::loadDailySeries(const std::string &apiKey,
     c.high = std::stod(bar.at("2. high").get<std::string>());
     c.low = std::stod(bar.at("3. low").get<std::string>());
     c.close = std::stod(bar.at("4. close").get<std::string>());
-
-    // For TIME_SERIES_DAILY, volume is "5. volume" (NOT "6. volume").
     c.volume = std::stod(bar.at("5. volume").get<std::string>());
 
-    temp.push_back(c);
+    candles.push_back(c);
   }
 
-  std::sort(temp.begin(), temp.end(),
-            [](const Candle &a, const Candle &b) {
-              return a.timestamp < b.timestamp;
-            });
-
-  candles_ = std::move(temp);
-
-  if(candles_.empty())
+  if(candles.empty())
   {
-    throw std::runtime_error("No candles loaded from Alpha Vantage.");
+    throw std::runtime_error("Alpha Vantage returned no candles for symbol " + symbol);
   }
-}
 
-std::unique_ptr<IMarketDataFeed>
-makeAlphaVantageFeed(const std::string &apiKey,
-                     const std::string &symbol)
-{
-  return std::make_unique<AlphaVantageFeed>(apiKey, symbol);
+  return std::make_unique<AlphaVantageFeed>(std::move(candles));
 }

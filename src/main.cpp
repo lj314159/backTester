@@ -95,6 +95,14 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  // Lookback bars: how many most-recent candles to use.
+  // Default: 100 (previous hard-coded behavior).
+  int lookbackBars = 100;
+  if(cfg.contains("data") && cfg["data"].contains("lookback_bars"))
+  {
+    lookbackBars = cfg["data"]["lookback_bars"].get<int>();
+  }
+
   try
   {
     // -------------------------------------------------
@@ -103,7 +111,7 @@ int main(int argc, char **argv)
     std::cout << "Fetching " << symbol
               << " from Alpha Vantage..." << std::endl;
 
-    auto feed = makeAlphaVantageFeed(apiKey, symbol);
+    auto feed = makeAlphaVantageFeed(apiKey, symbol, lookbackBars);
 
     std::cout << "Finished fetching " << symbol
               << " from Alpha Vantage." << std::endl;

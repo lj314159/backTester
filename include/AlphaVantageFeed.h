@@ -1,28 +1,31 @@
 #pragma once
 
 #include "IMarketDataFeed.h"
+#include "Types.h"
+
+#include <cstddef>
 #include <memory>
 #include <string>
+#include <vector>
 
 class AlphaVantageFeed : public IMarketDataFeed
 {
 public:
-  AlphaVantageFeed(const std::string &apiKey,
-                   const std::string &symbol);
+  explicit AlphaVantageFeed(std::vector<Candle> candles);
 
   bool hasNext() const override;
   const Candle &next() override;
   std::size_t currentIndex() const override;
 
 private:
-  void loadDailySeries(const std::string &apiKey,
-                       const std::string &symbol);
-
   std::vector<Candle> candles_;
-  std::size_t index_{ 0 };
+  std::size_t index_;
 };
 
-// Factory function (similar style to makeVectorFeed)
+// Factory: builds an AlphaVantageFeed by fetching data over HTTP.
+// lookbackBars > 0  -> keep only the most recent lookbackBars candles
+// lookbackBars <= 0 -> keep all candles returned by Alpha Vantage
 std::unique_ptr<IMarketDataFeed>
 makeAlphaVantageFeed(const std::string &apiKey,
-                     const std::string &symbol);
+                     const std::string &symbol,
+                     int lookbackBars);

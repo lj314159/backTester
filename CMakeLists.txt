@@ -1,15 +1,67 @@
 cmake_minimum_required(VERSION 3.10)
 project(BacktestEngineExample CXX)
 
+# ================================
+# Language / standard
+# ================================
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Public headers live here.
+# ================================
+# Build type (default: Release)
+# ================================
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING
+      "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)"
+      FORCE)
+endif()
+
+message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+
+# ================================
+# Compiler warnings (all configs)
+# ================================
+# These apply to all build types.
+add_compile_options(
+  -Wall
+  -Wextra
+  -Wpedantic
+  -Wshadow
+  -Wconversion
+  -Wsign-conversion
+)
+
+# ================================
+# Optimization flags for Release
+# ================================
+# These extend whatever CMake already sets for Release.
+set(CMAKE_CXX_FLAGS_RELEASE
+    "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -mtune=native -flto -fomit-frame-pointer"
+)
+
+# Optional: optimized but debuggable config
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO
+    "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O2 -march=native -mtune=native"
+)
+
+# Enable link-time optimization in Release (non-MSVC)
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+endif()
+
+# ================================
+# Include directories
+# ================================
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# libcurl for Alpha Vantage HTTP requests.
+# ================================
+# Dependencies
+# ================================
 find_package(CURL REQUIRED)
 
+# ================================
+# Executable and sources
+# ================================
 add_executable(backtest_engine
   src/main.cpp
   src/BacktestEngine.cpp
@@ -26,6 +78,4 @@ add_executable(backtest_engine
   src/StrategyFactory.cpp
 )
 
-# If your CMake/curl package doesn’t provide CURL::libcurl,
-# you can replace this with: target_link_libraries(backtest_engine PRIVATE curl)
 target_link_libraries(backtest_engine PRIVATE CURL::libcurl)
