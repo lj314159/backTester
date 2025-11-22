@@ -1,126 +1,160 @@
 @startuml
-skinparam backgroundColor white
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 
-title Backtesting Engine (Strategy Pattern, C++)
-
-/'
-  - ITradingStrategy is the interface (abstract class in C++)
-  - BacktestEngine is the Context
-  - Concrete strategies implement onBar() etc.
-'/
-
-'-------------------------------------------------------
-' Core data structures
-'-------------------------------------------------------
+' =========================
+'  Core types
+' =========================
 class Candle {
-    +dateTime : DateTime
-    +open : double
-    +high : double
-    +low  : double
-    +close : double
-    +volume : double
+  + timestamp : std::string
+  + open : double
+  + high : double
+  + low : double
+  + close : double
+  + volume : double
+}
+
+enum OrderSide {
+  Buy
+  Sell
 }
 
 class Order {
-    +id : int
-    +side : OrderSide
-    +symbol : std::string
-    +quantity : int
-    +price : double
+  + symbol   : std::string
+  + side     : OrderSide
+  + quantity : int
 }
 
 class Position {
-    +symbol : std::string
-    +quantity : int
-    +avgPrice : double
-    +unrealizedPnL() : double
+  + symbol   : std::string
+  + quantity : int
+  + avgPrice : double
 }
 
 class Portfolio {
-    +cash : double
-    +positions : std::map<std::string, Position>
-    +getPosition(symbol : std::string) : Position*
-    +updatePosition(order : Order, fillPrice : double) : void
-    +totalValue(marketData : MarketDataFeed) : double
+  - cash_      : double
+  - positions_ : std::unordered_map<std::string, Position>
+  + Portfolio(initialCash : double)
+  + void applyFill(order : Order, fillPrice : double)
+  + int getPositionQty(symbol : std::string) const
+  + double getPositionValue(symbol : std::string, lastPrice : double) const
+  + double getCash() const
 }
 
-class PortfolioView {
-    +getPosition(symbol : std::string) : const Position*
-    +getCash() : double
-    +getTotalValue() : double
+' Metrics utility (static functions only)
+class Metrics {
+  {static} double totalReturn(equityCurve : std::vector<double>)
+  {static} double maxDrawdown(equityCurve : std::vector<double>)
+  {static} double cagr(equityCurve : std::vector<double>, years : double)
+  {static} double sharpe(equityCurve : std::vector<double>)
 }
 
-PortfolioView ..> Portfolio : wraps >>
+' Forward decl so interfaces can reference it
+class BacktestEngine
 
-class MarketDataFeed {
-    +getNextBar(symbol : std::string) : Candle
-    +hasMoreData() : bool
-}
-
-class ExecutionEngine {
-    +sendOrder(order : Order) : void
-    +simulateFill(order : Order, bar : Candle) : double
-}
-
-'-------------------------------------------------------
-' Strategy Interface + Implementations
-'-------------------------------------------------------
+' =========================
+'  Interfaces / abstract roles
+' =========================
 interface ITradingStrategy {
-    +onBar(bar : Candle, portfolio : PortfolioView&, engine : BacktestEngine&) : void
-    +onStart(portfolio : PortfolioView&) : void
-    +onEnd(portfolio : PortfolioView&) : void
+  + onStart(engine : BacktestEngine)
+  + onBar(index : std::size_t, bar : Candle, engine : BacktestEngine)
+  + onEnd(engine : BacktestEngine)
 }
 
-abstract class BaseTradingStrategy {
-    +name : std::string
-    +setParameters(params : std::map<std::string, double>) : void
+interface IExecutionEngine {
+  + execute(orders : std::vector<Order>, bar : Candle, portfolio : Portfolio &)
 }
 
-ITradingStrategy <|-- BaseTradingStrategy
-
-class MeanReversionStrategy {
-    -lookback : int
-    -threshold : double
-    +onBar(bar : Candle, portfolio : PortfolioView&, engine : BacktestEngine&) : void
+interface IMarketDataFeed {
+  + hasNext() const : bool
+  + next() : const Candle &
+  + currentIndex() const : std::size_t
 }
 
-class MomentumStrategy {
-    -shortWindow : int
-    -longWindow  : int
-    +onBar(bar : Candle, portfolio : PortfolioView&, engine : BacktestEngine&) : void
-}
-
-BaseTradingStrategy <|-- MeanReversionStrategy
-BaseTradingStrategy <|-- MomentumStrategy
-
-'-------------------------------------------------------
-' Backtesting Context
-'-------------------------------------------------------
+' =========================
+'  Core engine
+' =========================
 class BacktestEngine {
-    -strategy : std::unique_ptr<ITradingStrategy>
-    -portfolio : Portfolio
-    -dataFeed : MarketDataFeed
-    -execEngine : ExecutionEngine
-    -symbol : std::string
-
-    +setStrategy(strategy : std::unique_ptr<ITradingStrategy>) : void
-    +run() : void
-    +placeOrder(order : Order) : void
-    +getPortfolioView() : PortfolioView
+  - strategy_     : std::unique_ptr<ITradingStrategy>
+  - exec_         : std::unique_ptr<IExecutionEngine>
+  - feed_         : std::unique_ptr<IMarketDataFeed>
+  - portfolio_    : Portfolio
+  - equityCurve_  : std::vector<double>
+  - symbol_       : std::string
+  + BacktestEngine(strategy  : std::unique_ptr<ITradingStrategy>,
+                   exec      : std::unique_ptr<IExecutionEngine>,
+                   feed      : std::unique_ptr<IMarketDataFeed>,
+                   initialCash : double,
+                   symbol    : std::string)
+  + void run()
+  + void placeOrder(order : const Order &)
+  + Portfolio & portfolio()
 }
 
-'-------------------------------------------------------
-' Relationships
-'-------------------------------------------------------
-BacktestEngine *-- Portfolio
-BacktestEngine *-- ExecutionEngine
-BacktestEngine o-- MarketDataFeed
-BacktestEngine *-- ITradingStrategy : currentStrategy
+' =========================
+'  Strategies
+' =========================
+class SimpleSMAStrategy
+class SmaCrossoverStrategy
+class RsiReversionStrategy
+class BreakoutStrategy
+class TrendRsiStrategy
 
-ITradingStrategy ..> PortfolioView
-ITradingStrategy ..> BacktestEngine
-BacktestEngine ..> Candle
-BacktestEngine ..> Order
+ITradingStrategy <|.. SimpleSMAStrategy
+ITradingStrategy <|.. SmaCrossoverStrategy
+ITradingStrategy <|.. RsiReversionStrategy
+ITradingStrategy <|.. BreakoutStrategy
+ITradingStrategy <|.. TrendRsiStrategy
+
+' Each strategy talks back to the engine and portfolio
+SimpleSMAStrategy ..> BacktestEngine
+SmaCrossoverStrategy ..> BacktestEngine
+RsiReversionStrategy ..> BacktestEngine
+BreakoutStrategy ..> BacktestEngine
+TrendRsiStrategy ..> BacktestEngine
+
+' =========================
+'  Execution engine
+' =========================
+class SimpleExecutionEngine
+
+IExecutionEngine <|.. SimpleExecutionEngine
+SimpleExecutionEngine ..> Portfolio
+SimpleExecutionEngine ..> Order
+
+' =========================
+'  Market data feeds
+' =========================
+class AlphaVantageFeed
+class VectorMarketDataFeed
+
+IMarketDataFeed <|.. AlphaVantageFeed
+IMarketDataFeed <|.. VectorMarketDataFeed
+AlphaVantageFeed ..> Candle
+VectorMarketDataFeed ..> Candle
+
+' =========================
+'  Strategy factory
+' =========================
+class StrategyFactory {
+  {static} makeStrategyFromConfig(strategyJson : nlohmann::json,
+                                  symbol : std::string) : std::unique_ptr<ITradingStrategy>
+}
+
+StrategyFactory ..> ITradingStrategy
+
+' =========================
+'  Relationships from engine
+' =========================
+' Composition: engine owns its Portfolio
+BacktestEngine *-- Portfolio
+
+' Aggregation: engine holds strategy / execution / feed via unique_ptr
+BacktestEngine o-- ITradingStrategy
+BacktestEngine o-- IExecutionEngine
+BacktestEngine o-- IMarketDataFeed
+
+' Engine uses Metrics to compute performance
+BacktestEngine ..> Metrics
 
 @enduml
