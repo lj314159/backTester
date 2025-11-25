@@ -11,8 +11,6 @@ find_package(CURL REQUIRED)
 
 file(GLOB SOURCES
     src/*.cpp
-    src/feed/*.cpp
-    src/exec/*.cpp
     src/strategies/*.cpp
 )
 
