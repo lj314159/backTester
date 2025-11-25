@@ -1,2 +1,4 @@
 build/
 backtestEngine.svg
+*.png
+*.svg
