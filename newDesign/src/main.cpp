@@ -11,25 +11,9 @@
 #include "feed/AlphaVantageFeed.hpp"
 #include "exec/SimpleExecutionEngine.hpp"
 #include "Strategy_I.hpp"
+#include "StrategyFactory.hpp" // <-- new
 
 using nlohmann::json;
-
-// Forward declarations of factory functions implemented in strategy .cpp files
-std::unique_ptr<Strategy_I>
-makeTrendRsiStrategy(const std::string &symbol,
-                     int period,
-                     double overbought,
-                     double oversold,
-                     int trendWindow);
-
-std::unique_ptr<Strategy_I>
-makeSmaCrossoverStrategy(const std::string &symbol,
-                         int shortPeriod,
-                         int longPeriod);
-
-std::unique_ptr<Strategy_I>
-makeBreakoutStrategy(const std::string &symbol,
-                     std::size_t lookbackWindow);
 
 static json loadConfig(const std::string &path)
 {
@@ -55,9 +39,11 @@ int main(int argc, char **argv)
 
     json cfg = loadConfig(configPath);
 
+    // Top-level config
     std::string symbol = cfg.at("asset").get<std::string>();
     double initialCash = cfg.at("initial_cash").get<double>();
 
+    // Data config
     const auto &dataCfg = cfg.at("data");
     std::string provider = dataCfg.at("provider").get<std::string>();
     std::string interval = dataCfg.at("interval").get<std::string>();
@@ -87,40 +73,12 @@ int main(int argc, char **argv)
       throw std::runtime_error("Unsupported data provider: " + provider);
     }
 
+    // Strategy config
     const auto &stratCfg = cfg.at("strategy");
     std::string stratName = stratCfg.at("name").get<std::string>();
 
-    std::unique_ptr<Strategy_I> strategy;
-
-    if(stratName == "trend_rsi")
-    {
-      const auto &params = stratCfg.at("params");
-      int period = params.at("period").get<int>();
-      double overbought = params.at("overbought").get<double>();
-      double oversold = params.at("oversold").get<double>();
-      int trendWindow = params.at("trend_window").get<int>();
-
-      strategy = makeTrendRsiStrategy(symbol, period, overbought, oversold, trendWindow);
-    }
-    else if(stratName == "sma_crossover")
-    {
-      const auto &params = stratCfg.at("params");
-      int shortP = params.at("short_period").get<int>();
-      int longP = params.at("long_period").get<int>();
-
-      strategy = makeSmaCrossoverStrategy(symbol, shortP, longP);
-    }
-    else if(stratName == "breakout")
-    {
-      const auto &params = stratCfg.at("params");
-      std::size_t lb = params.at("lookback_window").get<std::size_t>();
-
-      strategy = makeBreakoutStrategy(symbol, lb);
-    }
-    else
-    {
-      throw std::runtime_error("Unsupported strategy name: " + stratName);
-    }
+    // Let the factory decide which concrete strategy to build
+    std::unique_ptr<Strategy_I> strategy = createStrategy(symbol, stratCfg);
 
     auto exec = std::make_unique<SimpleExecutionEngine>();
 
