@@ -1,0 +1,27 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+participant BacktestEngine as Engine
+participant Strategy as Strategy
+participant ExecutionEngine as Exec
+participant DataFeed as Feed
+participant Portfolio as Portfolio
+
+loop for each candle
+    Engine -> Feed: getCandle()
+    Feed --> Engine: Candle
+
+    Engine -> Strategy: onBar(Candle, Portfolio)
+    Strategy --> Engine: Orders
+
+    loop for each order
+        Engine -> Exec: execute(Order)
+        Exec --> Engine: Fill
+        Engine -> Portfolio: applyFill(Fill)
+    end
+
+    Engine -> Portfolio: markToMarket(Candle)
+end
+
+@enduml

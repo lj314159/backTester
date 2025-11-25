@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="13.3">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>100</x>
+      <y>100</y>
+      <w>280</w>
+      <h>210</h>
+    </coordinates>
+    <panel_attributes>BacktestEngine
+--
+-strategy: Strategy_I
+-execution: ExecutionEngine_I
+-datafeed: DataFeed_I
+-portfolio: Portfolio
+-orders: vector&lt;Order&gt;
+--
++BacktestEngine(): Constructor
++run(): void
++placeOrder(order: Order): void
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>
