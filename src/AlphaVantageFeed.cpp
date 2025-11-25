@@ -34,10 +34,25 @@ std::string httpGet(const std::string &url)
   }
 
   std::string response;
+
+  // Basic options
   curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+  // --- SSL options: this is the important part ---
+  // Verify the peer and host (good practice)
+  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+
+  // Tell libcurl where the system CA bundle is on Ubuntu
+  curl_easy_setopt(curl, CURLOPT_CAINFO, "/etc/ssl/certs/ca-certificates.crt");
+  // (Optional, but sometimes helpful)
+  curl_easy_setopt(curl, CURLOPT_CAPATH, "/etc/ssl/certs");
+
+  // TEMP: turn on verbose output while debugging
+  // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
   CURLcode res = curl_easy_perform(curl);
   if(res != CURLE_OK)
