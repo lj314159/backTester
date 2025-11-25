@@ -7,6 +7,7 @@ participant Strategy as Strategy
 participant ExecutionEngine as Exec
 participant DataFeed as Feed
 participant Portfolio as Portfolio
+participant Metrics as Metrics
 
 loop for each candle
     Engine -> Feed: getCandle()
@@ -22,6 +23,11 @@ loop for each candle
     end
 
     Engine -> Portfolio: markToMarket(Candle)
+    Engine -> Metrics: recordStep(Portfolio)
 end
+Engine -> Metrics: computeReport()
+Metrics --> Engine: Report
+
+
 
 @enduml
