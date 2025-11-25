@@ -26,13 +26,19 @@ public:
              BacktestEngine &engine) override
   {
     if(bar.symbol != symbol_)
+    {
       return;
+    }
 
     closes_.push_back(bar.close);
     while((int)closes_.size() > longPeriod_)
+    {
       closes_.pop_front();
+    }
     if((int)closes_.size() < longPeriod_)
+    {
       return;
+    }
 
     double shortSma = computeSMA(shortPeriod_);
     double longSma = computeSMA(longPeriod_);
@@ -68,7 +74,9 @@ private:
   double computeSMA(int period) const
   {
     if((int)closes_.size() < period)
+    {
       return 0.0;
+    }
     double sum = 0.0;
     auto it = closes_.end();
     for(int i = 0; i < period; ++i)

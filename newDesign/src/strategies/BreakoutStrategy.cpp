@@ -31,14 +31,18 @@ public:
              BacktestEngine &engine) override
   {
     if(bar.symbol != symbol_)
+    {
       return;
+    }
 
     highs_.push_back(bar.high);
     lows_.push_back(bar.low);
     closes_.push_back(bar.close);
 
     if(!hasEnoughHistory())
+    {
       return;
+    }
 
     double close = bar.close;
     double rangeHigh = recentMaxHigh();
@@ -82,7 +86,9 @@ private:
     for(std::size_t i = start + 1; i <= end; ++i)
     {
       if(highs_[i] > maxH)
+      {
         maxH = highs_[i];
+      }
     }
     return maxH;
   }
@@ -97,7 +103,9 @@ private:
     for(std::size_t i = start + 1; i <= end; ++i)
     {
       if(lows_[i] < minL)
+      {
         minL = lows_[i];
+      }
     }
     return minL;
   }

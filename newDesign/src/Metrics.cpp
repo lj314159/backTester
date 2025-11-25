@@ -60,8 +60,10 @@ Report Metrics::computeReport() const
     {
       double sum = 0.0;
       for(double v : returns)
+      {
         sum += v;
-      double mean = sum / returns.size();
+      }
+      double mean = sum / static_cast<double>(returns.size());
 
       double var = 0.0;
       if(returns.size() > 1)
@@ -71,7 +73,7 @@ Report Metrics::computeReport() const
           double d = v - mean;
           var += d * d;
         }
-        var /= (returns.size() - 1);
+        var /= static_cast<double>(returns.size() - 1);
       }
       double stdDev = var > 0.0 ? std::sqrt(var) : 0.0;
 
@@ -82,7 +84,7 @@ Report Metrics::computeReport() const
         r.sharpe = std::sqrt(tradingDaysPerYear) * (mean / stdDev);
       }
 
-      double years = returns.size() / tradingDaysPerYear;
+      double years = static_cast<double>(returns.size()) / tradingDaysPerYear;
       if(years > 0.0)
       {
         r.cagr = std::pow(end / start, 1.0 / years) - 1.0;

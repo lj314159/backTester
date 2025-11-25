@@ -31,14 +31,20 @@ public:
              BacktestEngine &engine) override
   {
     if(bar.symbol != symbol_)
+    {
       return;
+    }
 
     closes_.push_back(bar.close);
     int maxNeeded = std::max(period_ + 1, trendWindow_);
     while((int)closes_.size() > maxNeeded)
+    {
       closes_.pop_front();
+    }
     if((int)closes_.size() < maxNeeded)
+    {
       return;
+    }
 
     double rsi = computeRSI();
     double trendSma = computeTrendSMA();
@@ -75,7 +81,9 @@ private:
   double computeRSI() const
   {
     if((int)closes_.size() < period_ + 1)
+    {
       return 50.0;
+    }
     double gain = 0.0, loss = 0.0;
     int n = (int)closes_.size();
     int start = n - period_;
@@ -83,9 +91,13 @@ private:
     {
       double diff = closes_[i] - closes_[i - 1];
       if(diff > 0)
+      {
         gain += diff;
+      }
       else
+      {
         loss -= diff;
+      }
     }
     double avgG = gain / period_;
     double avgL = loss / period_;
@@ -100,11 +112,15 @@ private:
   double computeTrendSMA() const
   {
     if((int)closes_.size() < trendWindow_)
+    {
       return closes_.back();
+    }
     double sum = 0.0;
     int n = (int)closes_.size();
     for(int i = n - trendWindow_; i < n; ++i)
+    {
       sum += closes_[i];
+    }
     return sum / trendWindow_;
   }
 
