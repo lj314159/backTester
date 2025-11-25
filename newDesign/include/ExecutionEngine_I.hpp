@@ -3,10 +3,11 @@
 #include <optional>
 #include "TradingTypes.hpp"
 
-class ExecutionEngine_I {
+class ExecutionEngine_I
+{
 public:
-    virtual ~ExecutionEngine_I() = default;
+  virtual ~ExecutionEngine_I() = default;
 
-    virtual std::optional<Fill>
-    execute(const Order& order, const Candle& bar) = 0;
+  virtual std::optional<Fill>
+  execute(const Order &order, const Candle &bar) = 0;
 };

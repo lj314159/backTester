@@ -5,13 +5,15 @@
 
 class BacktestEngine;
 
-class Strategy_I {
+class Strategy_I
+{
 public:
-    virtual ~Strategy_I() = default;
+  virtual ~Strategy_I() = default;
 
-    virtual void onStart(BacktestEngine& engine) {}
-    virtual void onBar(std::size_t index,
-                       const Candle& bar,
-                       BacktestEngine& engine) = 0;
-    virtual void onEnd(BacktestEngine& engine) {}
+  virtual void onStart(BacktestEngine &engine) {}
+  virtual void onBar(std::size_t index,
+                     const Candle &bar,
+                     BacktestEngine &engine)
+    = 0;
+  virtual void onEnd(BacktestEngine &engine) {}
 };

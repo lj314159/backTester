@@ -2,8 +2,9 @@
 
 #include "ExecutionEngine_I.hpp"
 
-class SimpleExecutionEngine : public ExecutionEngine_I {
+class SimpleExecutionEngine : public ExecutionEngine_I
+{
 public:
-    std::optional<Fill>
-    execute(const Order& order, const Candle& bar) override;
+  std::optional<Fill>
+  execute(const Order &order, const Candle &bar) override;
 };

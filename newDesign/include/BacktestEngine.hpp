@@ -10,26 +10,27 @@
 #include "ExecutionEngine_I.hpp"
 #include "TradingTypes.hpp"
 
-class BacktestEngine {
+class BacktestEngine
+{
 public:
-    BacktestEngine(std::unique_ptr<Strategy_I>        strategy,
-                   std::unique_ptr<ExecutionEngine_I> exec,
-                   std::unique_ptr<DataFeed_I>        feed,
-                   double                             initialCash);
+  BacktestEngine(std::unique_ptr<Strategy_I> strategy,
+                 std::unique_ptr<ExecutionEngine_I> exec,
+                 std::unique_ptr<DataFeed_I> feed,
+                 double initialCash);
 
-    void placeOrder(const Order& o);
+  void placeOrder(const Order &o);
 
-    Report run();
+  Report run();
 
-    Portfolio&       portfolio()       { return portfolio_; }
-    const Portfolio& portfolio() const { return portfolio_; }
+  Portfolio &portfolio() { return portfolio_; }
+  const Portfolio &portfolio() const { return portfolio_; }
 
 private:
-    std::vector<Order> pendingOrders_;
+  std::vector<Order> pendingOrders_;
 
-    std::unique_ptr<Strategy_I>        strategy_;
-    std::unique_ptr<ExecutionEngine_I> exec_;
-    std::unique_ptr<DataFeed_I>        feed_;
-    Portfolio                          portfolio_;
-    Metrics                            metrics_;
+  std::unique_ptr<Strategy_I> strategy_;
+  std::unique_ptr<ExecutionEngine_I> exec_;
+  std::unique_ptr<DataFeed_I> feed_;
+  Portfolio portfolio_;
+  Metrics metrics_;
 };
