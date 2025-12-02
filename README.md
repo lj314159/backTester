@@ -53,8 +53,9 @@ A backtest is run using a JSON configuration file:
 
     ./backtest_engine ../config.json
 
-Example config:
+Example config.json:
 
+```text
 {
   "asset": "AAPL",
   "initial_cash": 100000.0,
@@ -73,6 +74,7 @@ Example config:
     }
   }
 }
+```
 
 ## Example Strategy: TrendRsiStrategy
 
