@@ -3,8 +3,6 @@
 A lightweight, dependency-free C++ backtesting engine designed for speed, simplicity, and full control.  
 The engine uses only standard C++ headers and requires an Alpha Vantage API key for downloading historical data.
 
-------------------------------------------------------------
-
 ## Features
 
 - Zero external dependencies (pure C++17/C++20)
@@ -16,16 +14,12 @@ The engine uses only standard C++ headers and requires an Alpha Vantage API key 
 - Configurable backtest parameters
 - Works on Linux
 
-------------------------------------------------------------
-
 ## Requirements
 
 - GCC
 - Alpha Vantage API key (required)  
 - CMake (for building the project)  
 - No external libraries
-
-------------------------------------------------------------
 
 ## Getting an Alpha Vantage API Key
 
@@ -37,8 +31,6 @@ The engine uses only standard C++ headers and requires an Alpha Vantage API key 
     export ALPHA_VANTAGE_KEY=your_key_here
 
 The engine uses this environment variable to authenticate all data requests.
-
-------------------------------------------------------------
 
 ## Building the Project (CMake)
 
@@ -54,8 +46,6 @@ Build steps:
 This creates the executable:
 
     backtest_engine
-
-------------------------------------------------------------
 
 ## Running a Backtest
 
@@ -73,10 +63,9 @@ Example config:
         "initial_balance": 10000
     }
 
-------------------------------------------------------------
-
 ## Example Strategy: TrendRsiStrategy
 
+```cpp
     #include "Strategy_I.hpp"
     #include "BacktestEngine.hpp"
     #include <deque>
@@ -224,8 +213,40 @@ Example config:
       return std::make_unique<TrendRsiStrategy>(
         symbol, period, overbought, oversold, trendWindow);
     }
+```
 
-------------------------------------------------------------
+## Example Backtest Output
+
+Below is an example run of the engine using:
+
+```
+./backtest_engine ../config.json
+```
+
+**Output:**
+
+```text
+build $ ./backtest_engine ../config.json
+
+Fetching data from Alpha Vantage for AAPL (TIME_SERIES_DAILY, lookback_bars=-1)...
+Fetched 100 candles. Date range: 2025-07-11 -> 2025-12-01
+Running backtest...
+  Strategy: trend_rsi
+  Symbol:   AAPL
+  Cash:     100000
+TrendRsiStrategy starting
+TrendRsiStrategy finished. Final equity: 102354
+
+===== Backtest Results =====
+Initial equity: 100000
+Final equity:   102354
+Total return:   2.354%
+CAGR:           6.10146%
+Sharpe:         0.401873
+Max drawdown:   24.527%
+
+build $
+```
 
 ## License (MIT)
 
