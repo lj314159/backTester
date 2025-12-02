@@ -55,13 +55,24 @@ A backtest is run using a JSON configuration file:
 
 Example config:
 
-    {
-        "symbol": "AAPL",
-        "start": "2015-01-01",
-        "end": "2024-12-31",
-        "strategy": "TrendRsi",
-        "initial_balance": 10000
+{
+  "asset": "AAPL",
+  "initial_cash": 100000.0,
+  "data": {
+    "provider": "alpha_vantage",
+    "interval": "daily",
+    "lookback_bars": -1
+  },
+  "strategy": {
+    "name": "trend_rsi",
+    "params": {
+      "period": 14,
+      "overbought": 60.0,
+      "oversold": 40.0,
+      "trend_window": 50
     }
+  }
+}
 
 ## Example Strategy: TrendRsiStrategy
 
