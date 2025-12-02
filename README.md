@@ -47,7 +47,7 @@ This creates the executable:
 
     backtest_engine
 
-## Running a Backtest
+## Example of a run configuration
 
 A backtest is run using a JSON configuration file:
 
