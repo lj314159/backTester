@@ -1,116 +1,52 @@
-#include "BacktestEngine.h"
-#include "TradingStrategy_I.h"
-#include "ExecutionEngine_I.h"
-#include "MarketDataFeed_I.h"
-#include "Metrics.h"
+#include "BacktestEngine.hpp"
 
-#include <iostream>
-#include <algorithm>
-
-BacktestEngine::BacktestEngine(std::unique_ptr<TradingStrategy_I> strategy,
+BacktestEngine::BacktestEngine(std::unique_ptr<Strategy_I> strategy,
                                std::unique_ptr<ExecutionEngine_I> exec,
-                               std::unique_ptr<MarketDataFeed_I> feed,
-                               double initialCash,
-                               std::string assetSymbol)
+                               std::unique_ptr<DataFeed_I> feed,
+                               double initialCash)
   : strategy_(std::move(strategy)),
     exec_(std::move(exec)),
     feed_(std::move(feed)),
-    portfolio_(initialCash),
-    initialCash_(initialCash),
-    startDate_(),
-    endDate_(),
-    asset_(std::move(assetSymbol))
+    portfolio_(initialCash)
 {
 }
 
-void BacktestEngine::placeOrder(const Order &order)
+void BacktestEngine::placeOrder(const Order &o)
 {
-  pendingOrders_.push_back(order);
+  pendingOrders_.push_back(o);
 }
 
-void BacktestEngine::run()
+Report BacktestEngine::run()
 {
-  if(!strategy_ || !exec_ || !feed_)
-  {
-    std::cerr << "BacktestEngine not properly initialized.\n";
-    return;
-  }
-
-  equityCurve_.clear();
-  equityCurve_.reserve(1024); // arbitrary; avoids some reallocs
-
-  startDate_.clear();
-  endDate_.clear();
+  std::size_t index = 0;
 
   strategy_->onStart(*this);
 
   while(feed_->hasNext())
   {
     const Candle &bar = feed_->next();
+
+    // Strategy decides what to do; calls engine.placeOrder(...)
+    strategy_->onBar(index, bar, *this);
+
+    // Execute pending orders
+    for(const auto &o : pendingOrders_)
+    {
+      if(auto fill = exec_->execute(o, bar))
+      {
+        portfolio_.applyFill(*fill);
+      }
+    }
     pendingOrders_.clear();
 
-    // Record start/end dates for duration metrics.
-    if(equityCurve_.empty())
-    {
-      startDate_ = bar.timestamp;
-    }
-    endDate_ = bar.timestamp;
+    // Mark-to-market and record metrics
+    portfolio_.markToMarket(bar);
+    metrics_.recordStep(portfolio_, bar.timestamp);
 
-    // Strategy decides what to do on this bar.
-    strategy_->onBar(feed_->currentIndex(), bar, *this);
-
-    // Execute any orders placed during onBar.
-    if(!pendingOrders_.empty())
-    {
-      exec_->execute(pendingOrders_, bar, portfolio_);
-    }
-
-    // For now, treat equity as just cash. If you want to include
-    // unrealized PnL, you will need a way to value open positions here.
-    double equity = portfolio_.getCash();
-    equityCurve_.push_back(equity);
+    ++index;
   }
 
   strategy_->onEnd(*this);
 
-  // -------------------------------
-  //   Compute and print metrics
-  // -------------------------------
-  if(equityCurve_.size() >= 2)
-  {
-    double totalRet = Metrics::totalReturn(equityCurve_);
-    double maxDD = Metrics::maxDrawdown(equityCurve_);
-
-    // P/L measures.
-    double plPercent = totalRet * 100.0;
-    double plAmount = portfolio_.getCash() - initialCash_;
-
-    // Approximate years based on bar count, assuming 252 trading days/year.
-    double bars = static_cast<double>(equityCurve_.size());
-    double years = bars / 252.0;
-    if(years <= 0.0)
-    {
-      years = 1.0 / 252.0; // avoid zero/negative
-    }
-
-    double cagr = Metrics::cagr(equityCurve_, years);
-    double sharpe = Metrics::sharpe(equityCurve_);
-
-    std::cout << "\n=== Performance Metrics ===\n";
-    std::cout << "Asset:         " << asset_ << "\n";
-    std::cout << "Bars:          " << static_cast<int>(bars) << "\n";
-    std::cout << "Start date:    " << startDate_ << "\n";
-    std::cout << "End date:      " << endDate_ << "\n";
-    std::cout << "Duration:      " << years << " years (approx)\n";
-    std::cout << "P/L Amount:    " << plAmount << "\n";
-    std::cout << "P/L Percent:   " << plPercent << " %\n";
-    std::cout << "Total return:  " << totalRet * 100.0 << " %\n";
-    std::cout << "Max drawdown:  " << maxDD * 100.0 << " %\n";
-    std::cout << "CAGR:          " << cagr * 100.0 << " %\n";
-    std::cout << "Sharpe:        " << sharpe << "\n";
-  }
-  else
-  {
-    std::cout << "\nNot enough data to compute performance metrics.\n";
-  }
+  return metrics_.computeReport();
 }

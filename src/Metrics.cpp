@@ -1,95 +1,96 @@
-#include "Metrics.h"
-#include <cmath>
+#include "Metrics.hpp"
 #include <algorithm>
+#include <cmath>
+#include <vector>
 
-double Metrics::totalReturn(const std::vector<double> &curve)
+void Metrics::recordStep(const Portfolio &p, const std::string &ts)
 {
-  if(curve.size() < 2 || curve.front() <= 0.0)
-  {
-    return 0.0;
-  }
-  return (curve.back() - curve.front()) / curve.front();
+  Snapshot s;
+  s.timestamp = ts;
+  s.equity = p.getEquity();
+  s.cash = p.getCash();
+  snapshots_.push_back(s);
 }
 
-double Metrics::maxDrawdown(const std::vector<double> &curve)
+Report Metrics::computeReport() const
 {
-  if(curve.empty())
+  Report r{};
+  if(snapshots_.empty())
   {
-    return 0.0;
+    return r;
   }
 
-  double peak = curve.front();
+  const std::size_t n = snapshots_.size();
+  double start = snapshots_.front().equity;
+  double end = snapshots_.back().equity;
+
+  if(start > 0.0)
+  {
+    r.totalReturn = (end - start) / start;
+  }
+
+  double peak = snapshots_.front().equity;
   double maxDD = 0.0;
-
-  for(double v : curve)
+  for(const auto &s : snapshots_)
   {
-    peak = std::max(peak, v);
-    double dd = (peak - v) / peak;
-    if(dd > maxDD)
+    peak = std::max(peak, s.equity);
+    if(peak > 0.0)
     {
-      maxDD = dd;
+      double dd = (peak - s.equity) / peak;
+      maxDD = std::max(maxDD, dd);
     }
   }
-  return maxDD;
-}
+  r.maxDrawdown = maxDD;
 
-double Metrics::cagr(const std::vector<double> &curve, double years)
-{
-  if(curve.size() < 2 || curve.front() <= 0.0 || years <= 0.0)
+  if(n > 1 && start > 0.0 && end > 0.0)
   {
-    return 0.0;
-  }
-
-  double finalOverInitial = curve.back() / curve.front();
-  return std::pow(finalOverInitial, 1.0 / years) - 1.0;
-}
-
-double Metrics::sharpe(const std::vector<double> &curve, double riskFree)
-{
-  if(curve.size() < 2)
-  {
-    return 0.0;
-  }
-
-  std::vector<double> rets;
-  rets.reserve(curve.size() - 1);
-
-  for(std::size_t i = 1; i < curve.size(); ++i)
-  {
-    if(curve[i - 1] <= 0.0)
+    std::vector<double> returns;
+    returns.reserve(n - 1);
+    for(std::size_t i = 1; i < n; ++i)
     {
-      continue;
+      double prev = snapshots_[i - 1].equity;
+      double curr = snapshots_[i].equity;
+      if(prev > 0.0)
+      {
+        returns.push_back((curr - prev) / prev);
+      }
     }
-    double r = (curve[i] - curve[i - 1]) / curve[i - 1];
-    rets.push_back(r);
+
+    if(!returns.empty())
+    {
+      double sum = 0.0;
+      for(double v : returns)
+      {
+        sum += v;
+      }
+      double mean = sum / static_cast<double>(returns.size());
+
+      double var = 0.0;
+      if(returns.size() > 1)
+      {
+        for(double v : returns)
+        {
+          double d = v - mean;
+          var += d * d;
+        }
+        var /= static_cast<double>(returns.size() - 1);
+      }
+      double stdDev = var > 0.0 ? std::sqrt(var) : 0.0;
+
+      constexpr double tradingDaysPerYear = 252.0;
+
+      if(stdDev > 0.0)
+      {
+        r.sharpe = std::sqrt(tradingDaysPerYear) * (mean / stdDev);
+      }
+
+      double years = static_cast<double>(returns.size()) / tradingDaysPerYear;
+      if(years > 0.0)
+      {
+        r.cagr = std::pow(end / start, 1.0 / years) - 1.0;
+      }
+    }
   }
 
-  if(rets.empty())
-  {
-    return 0.0;
-  }
-
-  double mean = 0.0;
-  for(double r : rets)
-  {
-    mean += r;
-  }
-  mean /= static_cast<double>(rets.size());
-
-  double var = 0.0;
-  for(double r : rets)
-  {
-    double diff = r - mean;
-    var += diff * diff;
-  }
-  var /= static_cast<double>(rets.size());
-
-  double stdev = std::sqrt(var);
-  if(stdev == 0.0)
-  {
-    return 0.0;
-  }
-
-  double excess = mean - riskFree;
-  return (excess / stdev) * std::sqrt(252.0);
+  return r;
 }

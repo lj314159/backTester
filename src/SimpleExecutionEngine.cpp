@@ -1,22 +1,19 @@
-#include "ExecutionEngine_I.h"
-#include "Portfolio.h"
-#include <memory>
+#include "exec/SimpleExecutionEngine.hpp"
 
-class SimpleExecutionEngine : public ExecutionEngine_I
+std::optional<Fill>
+SimpleExecutionEngine::execute(const Order &order, const Candle &bar)
 {
-public:
-  void execute(const std::vector<Order> &orders,
-               const Candle &bar,
-               Portfolio &portfolio) override
+  if(order.type != OrderType::Market)
   {
-    for(const auto &ord : orders)
-    {
-      portfolio.applyFill(ord, bar.close);
-    }
+    return std::nullopt;
   }
-};
 
-std::unique_ptr<ExecutionEngine_I> makeSimpleExecutionEngine()
-{
-  return std::make_unique<SimpleExecutionEngine>();
+  Fill f;
+  f.symbol = order.symbol;
+  f.quantity = order.quantity;
+  f.side = order.side;
+  f.price = bar.close;
+  f.fees = 0.0;
+  f.timestamp = bar.timestamp;
+  return f;
 }

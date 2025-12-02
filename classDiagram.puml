@@ -1,0 +1,137 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+' =============================
+' INTERFACES (Strategy Pattern)
+' =============================
+
+interface Strategy_I {
+    + onBar(bar : Candle, portfolio : Portfolio) : List<Order>
+}
+
+interface DataFeed_I {
+    + getCandle() : Candle
+}
+
+interface ExecutionEngine_I {
+    + execute(order : Order, bar : Candle) : Fill
+}
+
+' =============================
+' DATA STRUCTS
+' =============================
+
+struct Candle {
+    timestamp : string
+    open  : double
+    high  : double
+    low   : double
+    close : double
+    volume : double
+}
+
+struct Order {
+    ticker   : string
+    quantity : int
+    side     : OrderSide
+    type     : OrderType
+    limitPrice : double
+    stopPrice  : double
+}
+
+struct Fill {
+    ticker   : string
+    quantity : int
+    price    : double
+    fees     : double
+    timestamp : string
+}
+
+struct Position {
+    ticker   : string
+    quantity : int
+    avgPrice : double
+    unrealizedPnL : double
+}
+
+struct Snapshot {
+    timestamp     : string
+    equity        : double
+    cash          : double
+    realizedPnL   : double
+    unrealizedPnL : double
+}
+
+struct Report {
+    totalReturn  : double
+    maxDrawdown  : double
+    sharpe       : double
+}
+
+' =============================
+' BEHAVIORAL CLASSES
+' =============================
+
+class Portfolio {
+    - cash : double
+    - positions : Map<string, Position>
+    + applyFill(fill : Fill) : void
+    + markToMarket(bar : Candle) : void
+    + getEquity() : double
+    + getPosition(ticker : string) : Position
+}
+
+class Metrics {
+    - snapshots : List<Snapshot>
+    + recordStep(portfolio : Portfolio) : void
+    + computeReport() : Report
+}
+
+class BacktestEngine {
+    - feed : DataFeed_I
+    - strategy : Strategy_I
+    - exec : ExecutionEngine_I
+    - portfolio : Portfolio
+    - metrics : Metrics
+    + run() : Report
+}
+
+' =============================
+' Concrete strategies
+' =============================
+
+class SMAStrategy {
+    - shortPeriod : int
+    - longPeriod  : int
+    + onBar(bar : Candle, portfolio : Portfolio) : List<Order>
+}
+
+class RSIStrategy {
+    - period : int
+    - overbought : double
+    - oversold : double
+    + onBar(bar : Candle, portfolio : Portfolio) : List<Order>
+}
+
+SMAStrategy --|> Strategy_I
+RSIStrategy --|> Strategy_I
+
+' =============================
+' Relationships
+' =============================
+
+BacktestEngine *-- Portfolio
+BacktestEngine *-- Metrics
+BacktestEngine o-- Strategy_I
+BacktestEngine o-- DataFeed_I
+BacktestEngine o-- ExecutionEngine_I
+
+Strategy_I --> Order
+ExecutionEngine_I --> Fill
+DataFeed_I --> Candle
+
+Portfolio --> Position
+Metrics --> Snapshot
+Metrics --> Report
+
+@enduml

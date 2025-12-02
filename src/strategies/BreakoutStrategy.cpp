@@ -1,13 +1,11 @@
-#include "TradingStrategy_I.h"
-#include "BacktestEngine.h"
-#include "Portfolio.h"
-
+#include "Strategy_I.hpp"
+#include "BacktestEngine.hpp"
 #include <vector>
 #include <iostream>
 #include <memory>
 #include <utility>
 
-class BreakoutStrategy : public TradingStrategy_I
+class BreakoutStrategy : public Strategy_I
 {
 public:
   BreakoutStrategy(std::string symbol,
@@ -18,8 +16,9 @@ public:
   {
   }
 
-  void onStart(BacktestEngine & /*engine*/) override
+  void onStart(BacktestEngine &engine) override
   {
+    (void)engine;
     highs_.clear();
     lows_.clear();
     closes_.clear();
@@ -31,12 +30,15 @@ public:
              const Candle &bar,
              BacktestEngine &engine) override
   {
+    if(bar.symbol != symbol_)
+    {
+      return;
+    }
+
     highs_.push_back(bar.high);
     lows_.push_back(bar.low);
     closes_.push_back(bar.close);
 
-    // Need at least lookbackWindow_ + 1 bars so that
-    // we can use the PREVIOUS lookbackWindow_ bars as the range.
     if(!hasEnoughHistory())
     {
       return;
@@ -46,11 +48,9 @@ public:
     double rangeHigh = recentMaxHigh();
     double rangeLow = recentMinLow();
 
-    int posQty = engine.portfolio().getPositionQty(symbol_);
+    const Position *pos = engine.portfolio().getPosition(symbol_);
+    int posQty = pos ? pos->quantity : 0;
 
-    // Classic breakout:
-    //  - close > previous N-bar high and flat  -> enter long
-    //  - close < previous N-bar low  and long  -> exit
     if(close > rangeHigh && posQty == 0)
     {
       enterLong(engine, 100);
@@ -73,21 +73,12 @@ public:
 private:
   bool hasEnoughHistory() const
   {
-    // Need enough bars to have a full previous-window range
-    //   size >= lookbackWindow_ + 1
-    if(highs_.size() >= lookbackWindow_ + 1)
-    {
-      return true;
-    }
-    return false;
+    return highs_.size() >= lookbackWindow_ + 1;
   }
 
-  // Previous N-bar high, excluding the current bar.
   double recentMaxHigh() const
   {
     std::size_t N = highs_.size();
-    // Current bar is at index N-1.
-    // Use [start, end] = [N-1-lookbackWindow_, N-2].
     std::size_t end = N - 2;
     std::size_t start = end - lookbackWindow_ + 1;
 
@@ -102,7 +93,6 @@ private:
     return maxH;
   }
 
-  // Previous N-bar low, excluding the current bar.
   double recentMinLow() const
   {
     std::size_t N = lows_.size();
@@ -146,7 +136,7 @@ private:
   int trades_;
 };
 
-std::unique_ptr<TradingStrategy_I>
+std::unique_ptr<Strategy_I>
 makeBreakoutStrategy(const std::string &symbol,
                      std::size_t lookbackWindow)
 {

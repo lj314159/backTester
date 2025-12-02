@@ -54,14 +54,9 @@ find_package(CURL REQUIRED)
 # ================================
 # Strategies
 # ================================
-set(STRATEGY_SOURCES
-  src/strategy/SimpleSMAStrategy.cpp
-  src/strategy/SmaCrossoverStrategy.cpp
-  src/strategy/RsiReversionStrategy.cpp
-  src/strategy/BreakoutStrategy.cpp
-  src/strategy/TrendRsiStrategy.cpp
+file(GLOB STRATEGY_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/src/strategies/*.cpp"
 )
-# ================================
 
 # ================================
 # Executable
@@ -71,7 +66,6 @@ add_executable(backtest_engine
   src/BacktestEngine.cpp
   src/Portfolio.cpp
   src/SimpleExecutionEngine.cpp
-  src/VectorMarketDataFeed.cpp
   src/Metrics.cpp
   src/AlphaVantageFeed.cpp
   src/StrategyFactory.cpp

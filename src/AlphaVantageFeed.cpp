@@ -1,5 +1,4 @@
-#include "AlphaVantageFeed.h"
-#include "MarketDataFeed_I.h"
+#include "feed/AlphaVantageFeed.hpp"
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
@@ -24,7 +23,6 @@ size_t writeCallback(char *ptr, size_t size, size_t nmemb, void *userdata)
   return totalSize;
 }
 
-// Helper to perform a simple HTTP GET using libcurl.
 std::string httpGet(const std::string &url)
 {
   CURL *curl = curl_easy_init();
@@ -35,24 +33,15 @@ std::string httpGet(const std::string &url)
 
   std::string response;
 
-  // Basic options
   curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
-  // --- SSL options: this is the important part ---
-  // Verify the peer and host (good practice)
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
-
-  // Tell libcurl where the system CA bundle is on Ubuntu
   curl_easy_setopt(curl, CURLOPT_CAINFO, "/etc/ssl/certs/ca-certificates.crt");
-  // (Optional, but sometimes helpful)
   curl_easy_setopt(curl, CURLOPT_CAPATH, "/etc/ssl/certs");
-
-  // TEMP: turn on verbose output while debugging
-  // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
   CURLcode res = curl_easy_perform(curl);
   if(res != CURLE_OK)
@@ -80,18 +69,13 @@ std::string httpGet(const std::string &url)
 } // namespace
 
 AlphaVantageFeed::AlphaVantageFeed(std::vector<Candle> candles)
-  : candles_(std::move(candles)),
-    index_(0)
+  : candles_(std::move(candles)), index_(0)
 {
 }
 
 bool AlphaVantageFeed::hasNext() const
 {
-  if(index_ < candles_.size())
-  {
-    return true;
-  }
-  return false;
+  return index_ < candles_.size();
 }
 
 const Candle &AlphaVantageFeed::next()
@@ -108,15 +92,14 @@ std::size_t AlphaVantageFeed::currentIndex() const
   return index_;
 }
 
-std::unique_ptr<MarketDataFeed_I>
+std::unique_ptr<DataFeed_I>
 makeAlphaVantageFeed(const std::string &apiKey,
                      const std::string &symbol,
                      int lookbackBars)
 {
-  // ------------------------------------------------------------------
-  // Build URL:
-  //   TIME_SERIES_DAILY, full history, then trim to lookbackBars.
-  // ------------------------------------------------------------------
+  std::cout << "Fetching data from Alpha Vantage for " << symbol
+            << " (TIME_SERIES_DAILY, lookback_bars=" << lookbackBars << ")...\n";
+
   std::ostringstream url;
   url << "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY"
       << "&symbol=" << symbol
@@ -125,9 +108,6 @@ makeAlphaVantageFeed(const std::string &apiKey,
 
   std::string raw = httpGet(url.str());
 
-  // ------------------------------------------------------------------
-  // Parse JSON.
-  // ------------------------------------------------------------------
   json j;
   try
   {
@@ -141,7 +121,6 @@ makeAlphaVantageFeed(const std::string &apiKey,
   }
 
   const char *seriesKey = "Time Series (Daily)";
-
   if(!j.contains(seriesKey))
   {
     std::ostringstream oss;
@@ -152,15 +131,11 @@ makeAlphaVantageFeed(const std::string &apiKey,
   }
 
   const json &series = j.at(seriesKey);
-
   if(!series.is_object())
   {
-    throw std::runtime_error("Alpha Vantage 'Time Series (Daily)' is not an object");
+    throw std::runtime_error("'Time Series (Daily)' is not an object");
   }
 
-  // ------------------------------------------------------------------
-  // Collect all dates, sort, and apply lookback.
-  // ------------------------------------------------------------------
   std::vector<std::string> dates;
   dates.reserve(series.size());
   for(auto it = series.begin(); it != series.end(); ++it)
@@ -168,24 +143,18 @@ makeAlphaVantageFeed(const std::string &apiKey,
     dates.push_back(it.key());
   }
 
-  // Sort ascending by date string (YYYY-MM-DD) so earliest first.
   std::sort(dates.begin(), dates.end());
 
   if(lookbackBars > 0)
   {
     std::size_t size = dates.size();
     std::size_t keep = static_cast<std::size_t>(lookbackBars);
-
     if(size > keep)
     {
-      // Number of elements to erase from the front.
       std::size_t toErase = size - keep;
-
       using Diff = std::vector<std::string>::difference_type;
       Diff firstKeep = static_cast<Diff>(toErase);
-
-      dates.erase(dates.begin(),
-                  dates.begin() + firstKeep);
+      dates.erase(dates.begin(), dates.begin() + firstKeep);
     }
   }
 
@@ -198,6 +167,7 @@ makeAlphaVantageFeed(const std::string &apiKey,
 
     Candle c;
     c.timestamp = date;
+    c.symbol = symbol;
     c.open = std::stod(bar.at("1. open").get<std::string>());
     c.high = std::stod(bar.at("2. high").get<std::string>());
     c.low = std::stod(bar.at("3. low").get<std::string>());
@@ -211,6 +181,10 @@ makeAlphaVantageFeed(const std::string &apiKey,
   {
     throw std::runtime_error("Alpha Vantage returned no candles for symbol " + symbol);
   }
+
+  std::cout << "Fetched " << candles.size() << " candles. "
+            << "Date range: " << candles.front().timestamp
+            << " -> " << candles.back().timestamp << "\n";
 
   return std::make_unique<AlphaVantageFeed>(std::move(candles));
 }

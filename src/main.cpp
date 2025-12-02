@@ -1,27 +1,27 @@
-#include "BacktestEngine.h"
-#include "ExecutionEngine_I.h"
-#include "MarketDataFeed_I.h"
-#include "StrategyFactory.h"
-#include "AlphaVantageFeed.h"
-#include "Types.h"
-
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <string>
 
 #include <nlohmann/json.hpp>
 
+#include "BacktestEngine.hpp"
+#include "feed/AlphaVantageFeed.hpp"
+#include "exec/SimpleExecutionEngine.hpp"
+#include "Strategy_I.hpp"
+#include "StrategyFactory.hpp" // <-- new
+
 using nlohmann::json;
 
-json loadConfig(const std::string &path)
+static json loadConfig(const std::string &path)
 {
   std::ifstream in(path);
   if(!in)
   {
     throw std::runtime_error("Failed to open config file: " + path);
   }
-
   json cfg;
   in >> cfg;
   return cfg;
@@ -29,122 +29,86 @@ json loadConfig(const std::string &path)
 
 int main(int argc, char **argv)
 {
-  // -------------------------------------------------
-  //  1. Get API key from environment
-  // -------------------------------------------------
-  const char *keyEnv = std::getenv("ALPHAVANTAGE_API_KEY");
-  if(keyEnv == nullptr)
-  {
-    std::cerr << "ALPHAVANTAGE_API_KEY not set\n";
-    return 1;
-  }
-  const std::string apiKey = keyEnv;
-
-  // -------------------------------------------------
-  //  2. Determine config file path
-  //     Default: ./config.json
-  //     Or:      ./backtest_engine myconfig.json
-  // -------------------------------------------------
-  std::string configPath = "config.json";
-  if(argc > 1)
-  {
-    configPath = argv[1];
-  }
-
-  json cfg;
   try
   {
-    cfg = loadConfig(configPath);
-  }
-  catch(const std::exception &ex)
-  {
-    std::cerr << "Error loading config: " << ex.what() << "\n";
-    return 1;
-  }
+    std::string configPath = "config.json";
+    if(argc > 1)
+    {
+      configPath = argv[1];
+    }
 
-  // -------------------------------------------------
-  //  3. Validate basic config fields
-  // -------------------------------------------------
-  if(!cfg.contains("asset"))
-  {
-    std::cerr << "Config error: 'asset' field is required\n";
-    return 1;
-  }
+    json cfg = loadConfig(configPath);
 
-  if(!cfg.contains("strategy"))
-  {
-    std::cerr << "Config error: 'strategy' section is required\n";
-    return 1;
-  }
+    // Top-level config
+    std::string symbol = cfg.at("asset").get<std::string>();
+    double initialCash = cfg.at("initial_cash").get<double>();
 
-  // looks for the asset being traded
-  std::string ticker = cfg.at("asset").get<std::string>();
+    // Data config
+    const auto &dataCfg = cfg.at("data");
+    std::string provider = dataCfg.at("provider").get<std::string>();
+    std::string interval = dataCfg.at("interval").get<std::string>();
+    int lookbackBars = dataCfg.at("lookback_bars").get<int>();
 
-  // looks for initial_cash, if doesn't exist, returns 100000.0
-  double initialCash = cfg.value("initial_cash", 100000.0);
+    std::unique_ptr<DataFeed_I> feed;
 
-  // Data provider (only alpha_vantage supported for now).
-  std::string provider = "alpha_vantage";
-  if(cfg.contains("data") && cfg["data"].contains("provider"))
-  {
-    provider = cfg["data"]["provider"].get<std::string>();
-  }
+    if(provider == "alpha_vantage")
+    {
+      if(interval != "daily")
+      {
+        std::cerr << "WARNING: only 'daily' supported; got '"
+                  << interval << "'. Using daily.\n";
+      }
 
-  if(provider != "alpha_vantage")
-  {
-    std::cerr << "Config error: only 'alpha_vantage' provider is supported in this version. Got: "
-              << provider << "\n";
-    return 1;
-  }
+      const char *keyEnv = std::getenv("ALPHAVANTAGE_API_KEY");
+      if(!keyEnv)
+      {
+        throw std::runtime_error("ALPHAVANTAGE_API_KEY is not set");
+      }
+      std::string apiKey = keyEnv;
 
-  // Lookback bars: how many most-recent candles to use.
-  // Default: 100
-  int lookbackBars = 100;
-  if(cfg.contains("data") && cfg["data"].contains("lookback_bars"))
-  {
-    lookbackBars = cfg["data"]["lookback_bars"].get<int>();
-  }
+      feed = makeAlphaVantageFeed(apiKey, symbol, lookbackBars);
+    }
+    else
+    {
+      throw std::runtime_error("Unsupported data provider: " + provider);
+    }
 
-  try
-  {
-    // -------------------------------------------------
-    //  4. Build data feed
-    // -------------------------------------------------
-    std::cout << "Fetching " << ticker << " from Alpha Vantage..." << std::endl;
+    // Strategy config
+    const auto &stratCfg = cfg.at("strategy");
+    std::string stratName = stratCfg.at("name").get<std::string>();
 
-    auto feed = makeAlphaVantageFeed(apiKey, ticker, lookbackBars);
+    // Let the factory decide which concrete strategy to build
+    std::unique_ptr<Strategy_I> strategy = createStrategy(symbol, stratCfg);
 
-    std::cout << "Finished fetching " << ticker << " from Alpha Vantage." << std::endl;
+    auto exec = std::make_unique<SimpleExecutionEngine>();
 
-    // -------------------------------------------------
-    //  5. Build execution engine and strategy
-    // -------------------------------------------------
-    auto exec = makeSimpleExecutionEngine();
+    std::cout << "Running backtest...\n";
+    std::cout << "  Strategy: " << stratName << "\n";
+    std::cout << "  Symbol:   " << symbol << "\n";
+    std::cout << "  Cash:     " << initialCash << "\n";
 
-    const json &strategyJson = cfg.at("strategy");
-    auto strategy = makeStrategyFromConfig(strategyJson, ticker);
-
-    // -------------------------------------------------
-    //  6. Run backtest
-    // -------------------------------------------------
-    // give engine control of previous objects
     BacktestEngine engine(std::move(strategy),
                           std::move(exec),
                           std::move(feed),
-                          initialCash,
-                          ticker);
+                          initialCash);
 
-    engine.run();
+    Report r = engine.run();
 
-    std::cout << "Backtest complete. Final cash: "
-              << engine.portfolio().getCash()
-              << "\n";
+    double finalEquity = engine.portfolio().getEquity();
+
+    std::cout << "\n===== Backtest Results =====\n";
+    std::cout << "Initial equity: " << initialCash << "\n";
+    std::cout << "Final equity:   " << finalEquity << "\n";
+    std::cout << "Total return:   " << r.totalReturn * 100.0 << "%\n";
+    std::cout << "CAGR:           " << r.cagr * 100.0 << "%\n";
+    std::cout << "Sharpe:         " << r.sharpe << "\n";
+    std::cout << "Max drawdown:   " << r.maxDrawdown * 100.0 << "%\n";
+
+    return 0;
   }
   catch(const std::exception &ex)
   {
-    std::cerr << "Error during backtest: " << ex.what() << "\n";
+    std::cerr << "ERROR: " << ex.what() << "\n";
     return 1;
   }
-
-  return 0;
 }

@@ -1,64 +1,104 @@
-#include "Portfolio.h"
-#include <stdexcept>
+#include "Portfolio.hpp"
+#include <algorithm>
+#include <cmath>
 
-Portfolio::Portfolio(double initialCash)
-  : cash_(initialCash)
+void Portfolio::applyFill(const Fill &f)
 {
-}
-
-// Very simple fill model: immediate fill at fillPrice, no fees.
-void Portfolio::applyFill(const Order &order, double fillPrice)
-{
-  auto &pos = positions_[order.symbol];
-  pos.symbol = order.symbol;
-
-  if(order.side == OrderSide::Buy)
+  int dir = 0;
+  switch(f.side)
   {
-    double cost = fillPrice * order.quantity;
-    cash_ -= cost;
+  case OrderSide::Buy:
+  case OrderSide::Cover:
+    dir = +1;
+    break;
+  case OrderSide::Sell:
+  case OrderSide::Short:
+    dir = -1;
+    break;
+  }
 
-    double newQty = pos.quantity + order.quantity;
-    if(newQty == 0)
+  int signedQty = dir * f.quantity;
+
+  auto &pos = positions_[f.symbol];
+  if(pos.symbol.empty())
+  {
+    pos.symbol = f.symbol;
+  }
+
+  if(pos.quantity == 0)
+  {
+    pos.quantity = signedQty;
+    pos.avgPrice = f.price;
+  }
+  else
+  {
+    if((pos.quantity > 0 && signedQty > 0) || (pos.quantity < 0 && signedQty < 0))
     {
-      pos.quantity = 0;
-      pos.avgPrice = 0.0;
+      double oldValue = pos.avgPrice * std::abs(pos.quantity);
+      double newValue = f.price * std::abs(signedQty);
+      int newQty = pos.quantity + signedQty;
+      if(newQty != 0)
+      {
+        pos.avgPrice = (oldValue + newValue) / std::abs(newQty);
+      }
+      pos.quantity = newQty;
     }
     else
     {
-      pos.avgPrice = (pos.avgPrice * pos.quantity + cost) / newQty;
-      pos.quantity = static_cast<int>(newQty);
+      pos.quantity += signedQty;
+      if(pos.quantity == 0)
+      {
+        pos.avgPrice = 0.0;
+      }
     }
+  }
+
+  double tradeValue = f.price * f.quantity;
+  if(dir > 0)
+  {
+    cash_ -= tradeValue;
+    cash_ -= f.fees;
   }
   else
-  { // Sell
-    double proceeds = fillPrice * order.quantity;
-    cash_ += proceeds;
-    pos.quantity -= order.quantity;
-    if(pos.quantity <= 0)
+  {
+    cash_ += tradeValue;
+    cash_ -= f.fees;
+  }
+}
+
+void Portfolio::markToMarket(const Candle &bar)
+{
+  auto it = positions_.find(bar.symbol);
+  if(it != positions_.end())
+  {
+    auto &pos = it->second;
+    if(pos.quantity != 0)
     {
-      pos.quantity = 0;
-      pos.avgPrice = 0.0;
+      pos.unrealizedPnL = (bar.close - pos.avgPrice) * pos.quantity;
+    }
+    else
+    {
+      pos.unrealizedPnL = 0.0;
     }
   }
 }
 
-int Portfolio::getPositionQty(const std::string &symbol) const
+double Portfolio::getEquity() const
 {
-  auto it = positions_.find(symbol);
-  if(it == positions_.end())
+  double unreal = 0.0;
+  for(const auto &[sym, pos] : positions_)
   {
-    return 0;
+    unreal += pos.unrealizedPnL;
   }
-  return it->second.quantity;
+  return cash_ + unreal;
 }
 
-double Portfolio::getPositionValue(const std::string &symbol,
-                                   double lastPrice) const
+const Position *Portfolio::getPosition(const std::string &symbol) const
 {
   auto it = positions_.find(symbol);
-  if(it == positions_.end())
+  if(it != positions_.end())
   {
-    return 0.0;
+    return &it->second;
   }
-  return it->second.quantity * lastPrice;
+  return nullptr;
 }

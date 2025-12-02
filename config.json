@@ -1,13 +1,11 @@
 {
   "asset": "AAPL",
   "initial_cash": 100000.0,
-
   "data": {
     "provider": "alpha_vantage",
     "interval": "daily",
     "lookback_bars": -1
   },
-
   "strategy": {
     "name": "trend_rsi",
     "params": {
