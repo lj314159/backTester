@@ -3,3 +3,4 @@ backtestEngine.svg
 *.png
 *.svg
 tidy.log
+*.uxf
