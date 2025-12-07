@@ -1,5 +1,5 @@
 {
-  "asset": "AAPL",
+  "asset": "SPY",
   "initial_cash": 100000.0,
   "data": {
     "provider": "alpha_vantage",
@@ -9,10 +9,10 @@
   "strategy": {
     "name": "mean_reversion_zscore",
     "params": {
-      "lookback": 20,
-      "entry_zscore": 2.0,
-      "exit_zscore": 0.5,
-      "ma_type": "sma"
+      "lookback": 15,
+      "entry_zscore": -1.5,
+      "exit_zscore": -0.25,
+      "ma_type": "ema"
     }
   }
 }

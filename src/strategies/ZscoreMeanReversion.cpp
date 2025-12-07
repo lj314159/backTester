@@ -75,7 +75,6 @@ private:
   {
     const std::size_t window = static_cast<std::size_t>(zWindow_);
 
-    // Enough data?
     if(closes_.size() < window)
       return 0.0;
 
