@@ -49,22 +49,28 @@ public:
              BacktestEngine &engine) override
   {
     if(bar.symbol != symbol_)
+    {
       return;
+    }
 
     closes_.push_back(bar.close);
 
-    // Only keep needed number of bars
     while(closes_.size() > static_cast<std::size_t>(zWindow_))
+    {
       closes_.pop_front();
+    }
 
     if(closes_.size() < static_cast<std::size_t>(zWindow_))
+    {
       return;
+    }
 
     double z = computeZScore();
     const Position *pos = engine.portfolio().getPosition(symbol_);
-    int qty = pos ? pos->quantity : 0;
+    int qty = (pos != nullptr) ? pos->quantity : 0;
 
-    if(qty == 0 && z < zEntry_) // BUY SIGNAL
+    // BUY SIGNAL
+    if(qty == 0 && z < zEntry_)
     {
       Order buy;
       buy.symbol = symbol_;
@@ -72,7 +78,8 @@ public:
       buy.quantity = 100;
       engine.placeOrder(buy);
     }
-    else if(qty > 0 && z > zExit_) // EXIT
+    // EXIT SIGNAL
+    else if(qty > 0 && z > zExit_)
     {
       Order sell;
       sell.symbol = symbol_;
@@ -94,23 +101,31 @@ private:
     const std::size_t window = static_cast<std::size_t>(zWindow_);
 
     if(closes_.size() < window)
+    {
       return 0.0;
+    }
 
     const std::size_t n = closes_.size();
     const std::size_t start = n - window;
 
     double sum = 0.0;
     for(std::size_t i = start; i < n; ++i)
+    {
       sum += closes_[i];
+    }
     double mean = sum / static_cast<double>(window);
 
     double sq = 0.0;
     for(std::size_t i = start; i < n; ++i)
+    {
       sq += (closes_[i] - mean) * (closes_[i] - mean);
+    }
     double sd = std::sqrt(sq / static_cast<double>(window));
 
     if(sd == 0.0)
+    {
       return 0.0;
+    }
 
     return (closes_.back() - mean) / sd;
   }
@@ -128,8 +143,9 @@ makeZScoreMeanReversionStrategy(const std::string &symbol,
                                 double zEntry,
                                 double zExit)
 {
-  return std::make_unique<ZScoreMeanReversion>(symbol,
-                                               zWindow,
-                                               zEntry,
-                                               zExit);
+  return std::make_unique<ZScoreMeanReversion>(
+    symbol,
+    zWindow,
+    zEntry,
+    zExit);
 }
