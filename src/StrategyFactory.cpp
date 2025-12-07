@@ -10,6 +10,14 @@ makeTrendRsiStrategy(const std::string &symbol,
                      double oversold,
                      int trendWindow);
 
+// create new strategy demo
+/*
+std::unique_ptr<Strategy_I>
+makeMyNewStrategy(const std::string &symbol,
+                  int p1,
+                  double p2);
+*/
+
 std::unique_ptr<Strategy_I>
 makeSmaCrossoverStrategy(const std::string &symbol,
                          int shortPeriod,
@@ -24,6 +32,8 @@ makeZScoreMeanReversionStrategy(const std::string &symbol,
                                 int lookback,
                                 double entryZ,
                                 double exitZ);
+
+// register strategy names for config.json
 std::unique_ptr<Strategy_I>
 createStrategy(const std::string &symbol,
                const nlohmann::json &stratCfg)
@@ -40,6 +50,16 @@ createStrategy(const std::string &symbol,
 
     return makeTrendRsiStrategy(symbol, period, overbought, oversold, trendWindow);
   }
+  // register strategy name demo
+  /*
+  else if (stratName == "my_new_strategy")
+  {
+      int p1 = params.at("p1").get<int>();
+      double p2 = params.at("p2").get<double>();
+
+      return makeMyNewStrategy(symbol, p1, p2);
+  }
+  */
   else if(stratName == "sma_crossover")
   {
     int shortP = params.at("short_period").get<int>();
