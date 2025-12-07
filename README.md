@@ -1,6 +1,6 @@
 # Backtesting Engine (C++)
 
-A lightweight, dependency-free C++ backtesting engine designed for speed, simplicity, and full control.  
+A lightweight, minimal dependency C++ backtesting engine designed for speed, simplicity, and full control.  
 The engine uses only standard C++ headers and requires an Alpha Vantage API key for downloading historical data.
 
 ## Features
