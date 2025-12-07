@@ -4,7 +4,25 @@
 #include <cmath>
 #include <iostream>
 #include <memory>
-// Note: this strategy works best in volatile markets
+
+/*
+ Z-SCORE MEAN REVERSION STRATEGY
+ --------------------------------
+ Uses a rolling mean + standard deviation to measure how far the current
+ price deviates from its average. The deviation is normalized as:
+
+      z = (price - mean) / stddev
+
+ Signals:
+   • Buy  when z <= entry_zscore   (price unusually low)
+   • Sell when z >= exit_zscore    (price returns toward mean)
+
+ Notes:
+   • Works best in sideways / mean-reverting markets.
+   • Performs poorly in strong trends.
+   • lookback controls smoothing (short = faster, long = quieter).
+   • Only trades long positions (no shorting).
+*/
 
 class ZScoreMeanReversion : public Strategy_I
 {
