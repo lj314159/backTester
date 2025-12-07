@@ -58,6 +58,11 @@ file(GLOB STRATEGY_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/strategies/*.cpp"
 )
 
+# Remove demo strategy MyNewStrategy.cpp from build
+list(REMOVE_ITEM STRATEGY_SOURCES
+    "${CMAKE_SOURCE_DIR}/src/strategies/MyNewStrategy.cpp"
+)
+
 # ================================
 # Executable
 # ================================
