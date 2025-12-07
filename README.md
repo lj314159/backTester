@@ -5,7 +5,7 @@ The engine uses only standard C++ headers and requires an Alpha Vantage API key 
 
 ## Features
 
-- Zero external dependencies (pure C++17/C++20)
+- Minimal external dependencies (only libcurl)
 - Event-driven backtesting architecture
 - Required Alpha Vantage data downloader
 - Simple Strategy interface
@@ -19,7 +19,7 @@ The engine uses only standard C++ headers and requires an Alpha Vantage API key 
 - GCC
 - Alpha Vantage API key (required)  
 - CMake (for building the project)  
-- No external libraries
+- libcurl (for HTTP calls to Alpha Vantage)
 
 ## Getting an Alpha Vantage API Key
 
