@@ -55,9 +55,9 @@ createStrategy(const std::string &symbol,
 
   else if(stratName == "mean_reversion_zscore")
   {
-      int lookback = params.at("lookback").get<int>();
-      double entryZ = params.at("entry_zscore").get<double>();
-      double exitZ = params.at("exit_zscore").get<double>();
+    int lookback = params.at("lookback").get<int>();
+    double entryZ = params.at("entry_zscore").get<double>();
+    double exitZ = params.at("exit_zscore").get<double>();
 
     return makeZScoreMeanReversionStrategy(symbol, lookback, entryZ, exitZ);
   }
