@@ -20,6 +20,11 @@ makeBreakoutStrategy(const std::string &symbol,
                      std::size_t lookbackWindow);
 
 std::unique_ptr<Strategy_I>
+makeZScoreMeanReversionStrategy(const std::string &symbol,
+                                int lookback,
+                                double entryZ,
+                                double exitZ);
+std::unique_ptr<Strategy_I>
 createStrategy(const std::string &symbol,
                const nlohmann::json &stratCfg)
 {
@@ -46,6 +51,15 @@ createStrategy(const std::string &symbol,
   {
     std::size_t lb = params.at("lookback_window").get<std::size_t>();
     return makeBreakoutStrategy(symbol, lb);
+  }
+
+  else if(stratName == "mean_reversion_zscore")
+  {
+      int lookback = params.at("lookback").get<int>();
+      double entryZ = params.at("entry_zscore").get<double>();
+      double exitZ = params.at("exit_zscore").get<double>();
+
+    return makeZScoreMeanReversionStrategy(symbol, lookback, entryZ, exitZ);
   }
 
   throw std::runtime_error("Unsupported strategy name: " + stratName);

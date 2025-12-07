@@ -1,0 +1,18 @@
+{
+  "asset": "AAPL",
+  "initial_cash": 100000.0,
+  "data": {
+    "provider": "alpha_vantage",
+    "interval": "daily",
+    "lookback_bars": -1
+  },
+  "strategy": {
+    "name": "mean_reversion_zscore",
+    "params": {
+      "lookback": 20,
+      "entry_zscore": 2.0,
+      "exit_zscore": 0.5,
+      "ma_type": "sma"
+    }
+  }
+}
