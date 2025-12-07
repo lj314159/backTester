@@ -51,13 +51,13 @@ This creates the executable:
 
 A backtest is run using a JSON configuration file:
 
-    ./backtest_engine ../config.json
+    ./backtest_engine ../configs/config.json
 
 Example config.json:
 
 ```text
 {
-  "asset": "AAPL",
+  "asset": "SPY",
   "initial_cash": 100000.0,
   "data": {
     "provider": "alpha_vantage",
@@ -65,18 +65,18 @@ Example config.json:
     "lookback_bars": -1
   },
   "strategy": {
-    "name": "trend_rsi",
+    "name": "mean_reversion_zscore",
     "params": {
-      "period": 14,
-      "overbought": 60.0,
-      "oversold": 40.0,
-      "trend_window": 50
+      "lookback": 15,
+      "entry_zscore": -1.5,
+      "exit_zscore": -0.25,
+      "ma_type": "ema"
     }
   }
 }
 ```
 
-## Example Strategy: TrendRsiStrategy
+## Example Strategy: Z-Score Mean Reversion
 
 ```cpp
 #include "Strategy_I.hpp"
@@ -86,59 +86,66 @@ Example config.json:
 #include <iostream>
 #include <memory>
 
-class TrendRsiStrategy : public Strategy_I
+/*
+ Z-SCORE MEAN REVERSION STRATEGY
+ --------------------------------
+ Uses a rolling mean + standard deviation to measure how far the current
+ price deviates from its average. The deviation is normalized as:
+
+      z = (price - mean) / stddev
+
+ Signals:
+   • Buy  when z <= entry_zscore   (price unusually low)
+   • Sell when z >= exit_zscore    (price returns toward mean)
+
+ Notes:
+   • Works best in sideways / mean-reverting markets.
+   • Performs poorly in strong trends.
+   • lookback controls smoothing (short = faster, long = quieter).
+   • Only trades long positions (no shorting).
+*/
+
+class ZScoreMeanReversion : public Strategy_I
 {
 public:
-  TrendRsiStrategy(std::string symbol,
-                   int period,
-                   double overbought,
-                   double oversold,
-                   int trendWindow)
+  ZScoreMeanReversion(std::string symbol,
+                      int zWindow,
+                      double zEntry,
+                      double zExit)
     : symbol_(std::move(symbol)),
-      period_(period),
-      overbought_(overbought),
-      oversold_(oversold),
-      trendWindow_(trendWindow) {}
-
-  void onStart(BacktestEngine &engine) override
+      zWindow_(zWindow),
+      zEntry_(zEntry),
+      zExit_(zExit)
   {
-    (void)engine;
-    closes_.clear();
-    std::cout << "TrendRsiStrategy starting\n";
   }
 
-  void onBar(std::size_t /*index*/,
+  void onStart(BacktestEngine &) override
+  {
+    closes_.clear();
+    std::cout << "ZScoreMeanReversionStrategy starting\n";
+  }
+
+  void onBar(std::size_t,
              const Candle &bar,
              BacktestEngine &engine) override
   {
     if(bar.symbol != symbol_)
-    {
       return;
-    }
 
     closes_.push_back(bar.close);
 
-    // maxNeeded is how many closes we need to keep in the window
-    const int maxNeededInt = std::max(period_ + 1, trendWindow_);
-    const std::size_t maxNeeded = static_cast<std::size_t>(maxNeededInt);
-
-    while(closes_.size() > maxNeeded)
-    {
+    // Only keep needed number of bars
+    while(closes_.size() > static_cast<std::size_t>(zWindow_))
       closes_.pop_front();
-    }
-    if(closes_.size() < maxNeeded)
-    {
+
+    if(closes_.size() < static_cast<std::size_t>(zWindow_))
       return;
-    }
 
-    double rsi = computeRSI();
-    double trendSma = computeTrendSMA();
-    double price = bar.close;
-
+    double z = computeZScore();
     const Position *pos = engine.portfolio().getPosition(symbol_);
     int qty = pos ? pos->quantity : 0;
 
-    if(qty == 0 && rsi < oversold_ && price > trendSma)
+    if(qty == 0 && z < zEntry_) // BUY SIGNAL
     {
       Order buy;
       buy.symbol = symbol_;
@@ -146,7 +153,7 @@ public:
       buy.quantity = 100;
       engine.placeOrder(buy);
     }
-    else if(qty > 0 && (rsi > overbought_ || price < trendSma))
+    else if(qty > 0 && z > zExit_) // EXIT
     {
       Order sell;
       sell.symbol = symbol_;
@@ -158,88 +165,56 @@ public:
 
   void onEnd(BacktestEngine &engine) override
   {
-    std::cout << "TrendRsiStrategy finished. Final equity: "
+    std::cout << "ZScoreMeanReversion finished. Final equity: "
               << engine.portfolio().getEquity() << "\n";
   }
 
 private:
-  double computeRSI() const
+  double computeZScore() const
   {
-    const std::size_t needed = static_cast<std::size_t>(period_ + 1);
-
-    if(closes_.size() < needed)
-    {
-      return 50.0;
-    }
-
-    double gain = 0.0;
-    double loss = 0.0;
-
-    const std::size_t n = closes_.size();
-    const std::size_t start = n - static_cast<std::size_t>(period_);
-
-    for(std::size_t i = start; i < n; ++i)
-    {
-      double diff = closes_[i] - closes_[i - 1];
-      if(diff > 0)
-      {
-        gain += diff;
-      }
-      else
-      {
-        loss -= diff;
-      }
-    }
-
-    double avgG = gain / static_cast<double>(period_);
-    double avgL = loss / static_cast<double>(period_);
-    if(avgL == 0.0)
-    {
-      return avgG == 0.0 ? 50.0 : 100.0;
-    }
-    double rs = avgG / avgL;
-    return 100.0 - 100.0 / (1.0 + rs);
-  }
-
-  double computeTrendSMA() const
-  {
-    const std::size_t window = static_cast<std::size_t>(trendWindow_);
+    const std::size_t window = static_cast<std::size_t>(zWindow_);
 
     if(closes_.size() < window)
-    {
-      return closes_.back();
-    }
+      return 0.0;
 
     const std::size_t n = closes_.size();
     const std::size_t start = n - window;
 
     double sum = 0.0;
     for(std::size_t i = start; i < n; ++i)
-    {
       sum += closes_[i];
-    }
+    double mean = sum / static_cast<double>(window);
 
-    return sum / static_cast<double>(trendWindow_);
+    double sq = 0.0;
+    for(std::size_t i = start; i < n; ++i)
+      sq += (closes_[i] - mean) * (closes_[i] - mean);
+    double sd = std::sqrt(sq / static_cast<double>(window));
+
+    if(sd == 0.0)
+      return 0.0;
+
+    return (closes_.back() - mean) / sd;
   }
 
   std::string symbol_;
-  int period_;
-  double overbought_;
-  double oversold_;
-  int trendWindow_;
+  int zWindow_;
+  double zEntry_;
+  double zExit_;
   std::deque<double> closes_;
 };
 
 std::unique_ptr<Strategy_I>
-makeTrendRsiStrategy(const std::string &symbol,
-                     int period,
-                     double overbought,
-                     double oversold,
-                     int trendWindow)
+makeZScoreMeanReversionStrategy(const std::string &symbol,
+                                int zWindow,
+                                double zEntry,
+                                double zExit)
 {
-  return std::make_unique<TrendRsiStrategy>(
-    symbol, period, overbought, oversold, trendWindow);
+  return std::make_unique<ZScoreMeanReversion>(symbol,
+                                               zWindow,
+                                               zEntry,
+                                               zExit);
 }
+
 
 ```
 
@@ -248,30 +223,30 @@ makeTrendRsiStrategy(const std::string &symbol,
 Below is an example run of the engine using:
 
 ```
-./backtest_engine ../config.json
+./backtest_engine ../configs/meanReversion.json
 ```
 
 **Output:**
 
 ```text
-build $ ./backtest_engine ../config.json
+build $ ./backtest_engine ../configs/meanReversion.json
 
-Fetching data from Alpha Vantage for AAPL (TIME_SERIES_DAILY, lookback_bars=-1)...
-Fetched 100 candles. Date range: 2025-07-11 -> 2025-12-01
+Fetching data from Alpha Vantage for SPY (TIME_SERIES_DAILY, lookback_bars=-1)...
+Fetched 100 candles. Date range: 2025-07-17 -> 2025-12-05
 Running backtest...
-  Strategy: trend_rsi
-  Symbol:   AAPL
+  Strategy: mean_reversion_zscore
+  Symbol:   SPY
   Cash:     100000
-TrendRsiStrategy starting
-TrendRsiStrategy finished. Final equity: 102354
+ZScoreMeanReversionStrategy starting
+ZScoreMeanReversion finished. Final equity: 101521
 
 ===== Backtest Results =====
 Initial equity: 100000
-Final equity:   102354
-Total return:   2.354%
-CAGR:           6.10146%
-Sharpe:         0.401873
-Max drawdown:   24.527%
+Final equity:   101521
+Total return:   1.521%
+CAGR:           3.91727%
+Sharpe:         1.40573
+Max drawdown:   67.0661%
 
 build $
 ```
