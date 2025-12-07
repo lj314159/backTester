@@ -11,7 +11,7 @@
 #include "feed/AlphaVantageFeed.hpp"
 #include "exec/SimpleExecutionEngine.hpp"
 #include "Strategy_I.hpp"
-#include "StrategyFactory.hpp" // <-- new
+#include "StrategyFactory.hpp"
 
 using nlohmann::json;
 
